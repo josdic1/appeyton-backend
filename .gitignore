@@ -1,0 +1,15 @@
+# env
+.env
+.env.local
+.env.*.local
+
+# python
+__pycache__/
+*.pyc
+.venv/
+
+# mac
+.DS_Store
+
+# logs
+*.log
