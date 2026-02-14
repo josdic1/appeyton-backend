@@ -14,21 +14,21 @@ def seed_db():
     
     try:
         # Check if admin already exists
-        admin = db.query(User).filter(User.email == "admin@sterling.local").first()
+        admin = db.query(User).filter(User.email == "josh@josh.com").first()
         if admin:
             print("⚠️  Admin user already exists. Skipping seed.")
             return
         
         print("Creating admin user...")
         admin = User(
-            email="admin@sterling.local",
-            name="Admin User",
+            email="josh@josh.com",
+            name="Josh Dickenz",
             phone="555-0100",
             role="admin",
             membership_status="active",
             guest_allowance=10,
         )
-        admin.set_password("admin123")  # CHANGE THIS IN PRODUCTION
+        admin.set_password("1111")  # CHANGE THIS IN PRODUCTION
         db.add(admin)
         db.flush()  # Get admin.id
         

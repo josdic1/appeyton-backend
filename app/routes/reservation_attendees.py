@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.reservation import Reservation
 from app.models.reservation_attendee import ReservationAttendee
+from app.models.member import Member
+from app.models.table_entity import TableEntity
 from app.schemas.reservation_attendee import (
     ReservationAttendeeCreate,
     ReservationAttendeeUpdate,
@@ -31,7 +33,26 @@ def create_attendee(
     db: Session = Depends(get_db),
     user: User = Depends(require_min_role("member")),
 ):
-    _get_owned_reservation(db, reservation_id, user.id)
+    reservation = _get_owned_reservation(db, reservation_id, user.id)
+    
+    # Check table capacity
+    table = db.query(TableEntity).filter(TableEntity.id == reservation.table_id).first()
+    current_attendees = db.query(ReservationAttendee).filter(
+        ReservationAttendee.reservation_id == reservation_id
+    ).count()
+    
+    if table and current_attendees >= table.seat_count:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot add attendee: table capacity is {table.seat_count}"
+        )
+
+    # If it's a member, fetch their name
+    if payload.member_id and not payload.name:
+        member = db.query(Member).filter(Member.id == payload.member_id).first()
+        if not member:
+            raise HTTPException(status_code=404, detail="Member not found")
+        payload.name = member.name
 
     a = ReservationAttendee(
         reservation_id=reservation_id,

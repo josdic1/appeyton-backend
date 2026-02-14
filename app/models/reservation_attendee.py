@@ -1,11 +1,15 @@
+# app/models/reservation_attendee.py
 from __future__ import annotations
-
+from typing import TYPE_CHECKING
 from datetime import datetime, timezone
 
-from sqlalchemy import String, DateTime, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Integer, String, ForeignKey, DateTime
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+
+if TYPE_CHECKING:
+    from app.models.reservation import Reservation
 
 try:
     from sqlalchemy.dialects.postgresql import JSONB  # type: ignore
@@ -18,18 +22,12 @@ class ReservationAttendee(Base):
     __tablename__ = "reservation_attendees"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-
-    reservation_id: Mapped[int] = mapped_column(
-        ForeignKey("reservations.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    member_id: Mapped[int | None] = mapped_column(ForeignKey("members.id"), nullable=True, index=True)
-
-    name: Mapped[str] = mapped_column(String(120), nullable=False)
-    attendee_type: Mapped[str] = mapped_column(String(30), nullable=False)  # member/guest/staff/etc
-
+    reservation_id: Mapped[int] = mapped_column(ForeignKey("reservations.id", ondelete="CASCADE"), nullable=False, index=True)
+    member_id: Mapped[int | None] = mapped_column(ForeignKey("members.id"), nullable=True)
+    name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    attendee_type: Mapped[str] = mapped_column(String(20), nullable=False)
     dietary_restrictions: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
     meta: Mapped[dict | None] = mapped_column("metadata", JSONType, nullable=True)
-
     created_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
@@ -41,3 +39,6 @@ class ReservationAttendee(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+    
+    # Relationship back to reservation
+    reservation: Mapped["Reservation"] = relationship("Reservation", back_populates="attendees")

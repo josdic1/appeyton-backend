@@ -1,4 +1,6 @@
+# app/models/reservation.py
 from __future__ import annotations
+from typing import TYPE_CHECKING
 
 from datetime import datetime, timezone, date as date_type, time as time_type
 
@@ -13,9 +15,12 @@ from sqlalchemy import (
     UniqueConstraint,
     Index,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+
+if TYPE_CHECKING:
+    from app.models.reservation_attendee import ReservationAttendee
 
 try:
     from sqlalchemy.dialects.postgresql import JSONB  # type: ignore
@@ -43,7 +48,6 @@ class Reservation(Base):
     end_time: Mapped[time_type] = mapped_column(Time, nullable=False)
 
     status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False, index=True)
-    party_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     meta: Mapped[dict | None] = mapped_column("metadata", JSONType, nullable=True)
 
@@ -62,3 +66,15 @@ class Reservation(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+    
+    # Relationship to attendees
+    attendees: Mapped[list["ReservationAttendee"]] = relationship(
+        "ReservationAttendee", 
+        back_populates="reservation",
+        lazy="select"
+    )
+    
+    @property
+    def party_size(self) -> int:
+        """Calculate party size from number of attendees"""
+        return len(self.attendees)

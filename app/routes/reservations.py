@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models.reservation import Reservation
@@ -16,11 +16,10 @@ from app.models.user import User
 router = APIRouter()
 
 
-def _assert_table_and_capacity(
+def _assert_table_exists(
     db: Session,
     dining_room_id: int,
     table_id: int,
-    party_size: int | None,
 ):
     room = db.query(DiningRoom).filter(DiningRoom.id == dining_room_id).first()
     if not room:
@@ -35,14 +34,8 @@ def _assert_table_and_capacity(
     )
     if not table:
         raise HTTPException(status_code=404, detail="Table not found in that dining room")
-
-    if party_size is not None:
-        if party_size < 1:
-            raise HTTPException(status_code=400, detail="party_size must be >= 1")
-        if party_size > table.seat_count:
-            raise HTTPException(status_code=409, detail=f"Party size exceeds table seats ({table.seat_count})")
-        if party_size > room.capacity:
-            raise HTTPException(status_code=409, detail=f"Party size exceeds dining room capacity ({room.capacity})")
+    
+    return table
 
 
 @router.post("", response_model=ReservationResponse, status_code=status.HTTP_201_CREATED)
@@ -51,7 +44,7 @@ def create_reservation(
     db: Session = Depends(get_db),
     user: User = Depends(require_min_role("member")),
 ):
-    _assert_table_and_capacity(db, payload.dining_room_id, payload.table_id, payload.party_size)
+    _assert_table_exists(db, payload.dining_room_id, payload.table_id)
 
     r = Reservation(
         user_id=user.id,
@@ -61,7 +54,6 @@ def create_reservation(
         meal_type=payload.meal_type,
         start_time=payload.start_time,
         end_time=payload.end_time,
-        party_size=payload.party_size,
         notes=payload.notes,
         meta=getattr(payload, "meta", None),
         status="pending",
@@ -76,6 +68,8 @@ def create_reservation(
         raise HTTPException(status_code=409, detail="That table is already booked for that date+meal_type")
 
     db.refresh(r)
+    # Load attendees for party_size calculation
+    db.refresh(r, ["attendees"])
     return r
 
 
@@ -87,6 +81,7 @@ def list_my_reservations(
     """Members see only their own reservations"""
     return (
         db.query(Reservation)
+        .options(joinedload(Reservation.attendees))
         .filter(Reservation.user_id == user.id)
         .order_by(Reservation.date.desc(), Reservation.start_time.desc())
         .all()
@@ -99,7 +94,12 @@ def get_reservation(
     db: Session = Depends(get_db),
     user: User = Depends(require_min_role("member")),
 ):
-    r = db.query(Reservation).filter(Reservation.id == reservation_id, Reservation.user_id == user.id).first()
+    r = (
+        db.query(Reservation)
+        .options(joinedload(Reservation.attendees))
+        .filter(Reservation.id == reservation_id, Reservation.user_id == user.id)
+        .first()
+    )
     if not r:
         raise HTTPException(status_code=404, detail="Reservation not found")
     return r
@@ -112,7 +112,12 @@ def update_reservation(
     db: Session = Depends(get_db),
     user: User = Depends(require_min_role("member")),
 ):
-    r = db.query(Reservation).filter(Reservation.id == reservation_id, Reservation.user_id == user.id).first()
+    r = (
+        db.query(Reservation)
+        .options(joinedload(Reservation.attendees))
+        .filter(Reservation.id == reservation_id, Reservation.user_id == user.id)
+        .first()
+    )
     if not r:
         raise HTTPException(status_code=404, detail="Reservation not found")
 
@@ -120,9 +125,15 @@ def update_reservation(
 
     dining_room_id = data.get("dining_room_id", r.dining_room_id)
     table_id = data.get("table_id", r.table_id)
-    party_size = data.get("party_size", r.party_size)
 
-    _assert_table_and_capacity(db, dining_room_id, table_id, party_size)
+    table = _assert_table_exists(db, dining_room_id, table_id)
+    
+    # Check if party size (attendees) exceeds table capacity
+    if len(r.attendees) > table.seat_count:
+        raise HTTPException(
+            status_code=409, 
+            detail=f"Cannot update: {len(r.attendees)} attendees exceed table capacity of {table.seat_count}"
+        )
 
     for k, v in data.items():
         setattr(r, k, v)
