@@ -1,26 +1,58 @@
 # app/main.py
-from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import Base, engine
-from app.routes.users import router as users_router
-from app.routes.admin_users import router as admin_users_router
+from app.routes import (
+    users,
+    members,
+    reservations,
+    reservation_attendees,
+    dining_rooms,
+    admin_dining_rooms,
+    admin_tables,
+    admin_users,
+    ops,
+)
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
-    yield
+app = FastAPI(
+    title="Sterling Catering API",
+    redirect_slashes=True  # ← Handles trailing slash automatically
+)
 
-app = FastAPI(title="Appeyton API", lifespan=lifespan)
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Update in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-app.include_router(users_router, prefix="/users", tags=["Users"])
-app.include_router(admin_users_router, prefix="/admin", tags=["Admin"])
+# Public routes
+app.include_router(users.router, prefix="/api/users", tags=["users"])
 
-class RootResponse(BaseModel):
-    ok: bool
-    app: str
+# Member routes (authenticated)
+app.include_router(members.router, prefix="/api/members", tags=["members"])
+app.include_router(reservations.router, prefix="/api/reservations", tags=["reservations"])
+app.include_router(reservation_attendees.router, prefix="/api/reservation-attendees", tags=["reservation-attendees"])
 
-@app.get("/", response_model=RootResponse)
+# Read-only routes for all authenticated users
+app.include_router(dining_rooms.router, prefix="/api/dining-rooms", tags=["dining-rooms"])
+
+# Admin-only routes
+app.include_router(admin_dining_rooms.router, prefix="/api/admin/dining-rooms", tags=["admin-dining-rooms"])
+app.include_router(admin_tables.router, prefix="/api/admin/tables", tags=["admin-tables"])
+app.include_router(admin_users.router, prefix="/api/admin", tags=["admin"])
+
+# Ops routes (staff/admin)
+app.include_router(ops.router, prefix="/api/ops", tags=["ops"])
+
+
+@app.get("/")
 def root():
-    return {"ok": True, "app": "Appeyton"}
+    return {"message": "Sterling Catering API"}
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
