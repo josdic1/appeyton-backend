@@ -1,0 +1,1275 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sterling Catering - Test UI</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+        background: #f5f5f5;
+        color: #333;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      header {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .user-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .user-badge {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .role-admin {
+        background: #ff4444;
+        color: white;
+      }
+      .role-staff {
+        background: #4444ff;
+        color: white;
+      }
+      .role-member {
+        background: #44ff44;
+        color: white;
+      }
+
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: background 0.2s;
+      }
+
+      button:hover {
+        background: #0056b3;
+      }
+      button.danger {
+        background: #dc3545;
+      }
+      button.danger:hover {
+        background: #c82333;
+      }
+      button.secondary {
+        background: #6c757d;
+      }
+      button.success {
+        background: #28a745;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      .card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .card h2 {
+        margin-bottom: 15px;
+        color: #333;
+        font-size: 18px;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+        font-size: 14px;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+
+      textarea {
+        min-height: 80px;
+        resize: vertical;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #ddd;
+      }
+
+      .tab {
+        padding: 12px 24px;
+        cursor: pointer;
+        border: none;
+        background: none;
+        font-size: 16px;
+        font-weight: 500;
+        color: #666;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+      }
+
+      .tab.active {
+        color: #007bff;
+        border-bottom-color: #007bff;
+      }
+
+      .tab-content {
+        display: none;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
+      .item-list {
+        list-style: none;
+      }
+
+      .item-list li {
+        padding: 12px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .item-list li:last-child {
+        border-bottom: none;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .badge-pending {
+        background: #ffc107;
+        color: #000;
+      }
+      .badge-confirmed {
+        background: #28a745;
+        color: white;
+      }
+      .badge-cancelled {
+        background: #dc3545;
+        color: white;
+      }
+      .badge-incomplete {
+        background: #6c757d;
+        color: white;
+      }
+      .badge-complete {
+        background: #28a745;
+        color: white;
+      }
+
+      .login-container {
+        max-width: 400px;
+        margin: 100px auto;
+      }
+
+      .quick-login {
+        margin-top: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 6px;
+      }
+
+      .quick-login h3 {
+        margin-bottom: 10px;
+        font-size: 14px;
+      }
+
+      .quick-login-btns {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .quick-login-btns button {
+        text-align: left;
+        padding: 8px 12px;
+        font-size: 13px;
+      }
+
+      .alert {
+        padding: 12px;
+        border-radius: 6px;
+        margin-bottom: 15px;
+      }
+
+      .alert-error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+
+      .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+
+      th,
+      td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+      }
+
+      th {
+        background: #f8f9fa;
+        font-weight: 600;
+        font-size: 13px;
+      }
+
+      td {
+        font-size: 14px;
+      }
+
+      .action-btns {
+        display: flex;
+        gap: 5px;
+      }
+
+      .action-btns button {
+        padding: 5px 10px;
+        font-size: 12px;
+      }
+
+      /* Modal Styles */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+
+      .modal-content {
+        background: white;
+        border-radius: 8px;
+        max-width: 800px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .modal-header {
+        padding: 20px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .modal-header h2 {
+        margin: 0;
+        font-size: 20px;
+      }
+
+      .modal-body {
+        padding: 20px;
+      }
+
+      .modal-footer {
+        padding: 20px;
+        border-top: 1px solid #eee;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      /* Toast Styles */
+      .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        width: 400px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        z-index: 2000;
+        animation: slideIn 0.3s ease;
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateX(450px);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      .toast-header {
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 600;
+      }
+
+      .toast-body {
+        padding: 15px;
+      }
+
+      .toast-5w1h {
+        margin-bottom: 10px;
+        padding: 8px;
+        background: #f8f9fa;
+        border-radius: 4px;
+        font-size: 13px;
+      }
+
+      .toast-5w1h strong {
+        color: #007bff;
+      }
+
+      .toast-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 15px;
+      }
+
+      .toast-actions button {
+        flex: 1;
+        min-width: 120px;
+      }
+
+      .toast-meta {
+        padding: 10px 15px;
+        background: #f8f9fa;
+        border-top: 1px solid #eee;
+        font-size: 11px;
+        color: #666;
+      }
+
+      .toast-success {
+        border-left: 4px solid #28a745;
+      }
+      .toast-error {
+        border-left: 4px solid #dc3545;
+      }
+      .toast-warning {
+        border-left: 4px solid #ffc107;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-container">
+      <div class="card">
+        <h2>Sterling Catering - Login</h2>
+        <div id="loginError" class="alert alert-error hidden"></div>
+        <form id="loginForm">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="loginEmail" required />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="loginPassword" required />
+          </div>
+          <button type="submit">Login</button>
+        </form>
+
+        <div class="quick-login">
+          <h3>Quick Login (Test Accounts)</h3>
+          <div class="quick-login-btns">
+            <button
+              onclick="quickLogin('josh@josh.com', '1111')"
+              class="role-admin"
+            >
+              🔑 Admin - Josh Dicker
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="hidden">
+      <div class="container">
+        <header>
+          <div class="user-info">
+            <div>
+              <h1>Sterling Catering</h1>
+              <p id="userWelcome"></p>
+            </div>
+            <div>
+              <span id="userRole" class="user-badge"></span>
+              <button
+                onclick="logout()"
+                class="secondary"
+                style="margin-left: 10px"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <!-- Tabs -->
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('dashboard')">
+            Dashboard
+          </button>
+          <button class="tab" onclick="switchTab('reservations')">
+            Reservations
+          </button>
+          <button class="tab" onclick="switchTab('family')">
+            Family Members
+          </button>
+          <button class="tab" onclick="switchTab('menu')">Menu</button>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboardTab" class="tab-content active">
+          <div class="grid">
+            <div class="card">
+              <h2>My Upcoming Reservations</h2>
+              <ul id="upcomingReservations" class="item-list"></ul>
+            </div>
+            <div class="card">
+              <h2>Quick Actions</h2>
+              <div style="display: flex; flex-direction: column; gap: 10px">
+                <button onclick="switchTab('reservations')">
+                  Create Reservation
+                </button>
+                <button onclick="switchTab('family')">Manage Family</button>
+                <button onclick="loadData()">Refresh Data</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reservations Tab -->
+        <div id="reservationsTab" class="tab-content">
+          <div class="grid">
+            <div class="card">
+              <h2>Create New Reservation</h2>
+              <form id="createReservationForm">
+                <div class="form-group">
+                  <label>Dining Room</label>
+                  <select id="diningRoomSelect" required></select>
+                </div>
+                <div class="form-group">
+                  <label>Table</label>
+                  <select id="tableSelect" required></select>
+                </div>
+                <div class="form-group">
+                  <label>Date</label>
+                  <input type="date" id="resDate" required />
+                </div>
+                <div class="form-group">
+                  <label>Meal Type</label>
+                  <select id="mealType" required>
+                    <option value="breakfast">Breakfast</option>
+                    <option value="lunch">Lunch</option>
+                    <option value="dinner">Dinner</option>
+                    <option value="brunch">Brunch</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Start Time</label>
+                  <input type="time" id="startTime" required />
+                </div>
+                <div class="form-group">
+                  <label>End Time</label>
+                  <input type="time" id="endTime" required />
+                </div>
+                <div class="form-group">
+                  <label>Party Size (optional)</label>
+                  <input type="number" id="partySize" min="1" />
+                </div>
+                <div class="form-group">
+                  <label>Notes</label>
+                  <textarea id="resNotes"></textarea>
+                </div>
+                <button type="submit">Create Reservation</button>
+              </form>
+            </div>
+            <div class="card">
+              <h2>All My Reservations</h2>
+              <div id="allReservations"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Family Tab -->
+        <div id="familyTab" class="tab-content">
+          <div class="grid">
+            <div class="card">
+              <h2>Add Family Member</h2>
+              <form id="createMemberForm">
+                <div class="form-group">
+                  <label>Name</label>
+                  <input type="text" id="memberName" required />
+                </div>
+                <div class="form-group">
+                  <label>Relation</label>
+                  <select id="memberRelation" required>
+                    <option value="self">Self</option>
+                    <option value="spouse">Spouse</option>
+                    <option value="partner">Partner</option>
+                    <option value="child">Child</option>
+                    <option value="parent">Parent</option>
+                    <option value="sibling">Sibling</option>
+                    <option value="friend">Friend</option>
+                  </select>
+                </div>
+                <button type="submit">Add Member</button>
+              </form>
+            </div>
+            <div class="card">
+              <h2>My Family Members</h2>
+              <div id="familyList"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Menu Tab -->
+        <div id="menuTab" class="tab-content">
+          <div class="card">
+            <h2>Menu Items</h2>
+            <div id="menuList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attendee Modal -->
+    <div id="attendeeModal" class="modal-overlay hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Manage Attendees</h2>
+          <button onclick="closeAttendeeModal()" class="secondary">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="grid">
+            <div class="card">
+              <h3>Add Attendee</h3>
+              <form id="addAttendeeForm">
+                <div class="form-group">
+                  <label>Select Family Member</label>
+                  <select id="attendeeMemberSelect">
+                    <option value="">-- Or enter guest name below --</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Name</label>
+                  <input type="text" id="attendeeName" required />
+                </div>
+                <div class="form-group">
+                  <label>Type</label>
+                  <select id="attendeeType" required>
+                    <option value="member">Family Member</option>
+                    <option value="guest">Guest</option>
+                  </select>
+                </div>
+                <button type="submit">Add Attendee</button>
+              </form>
+            </div>
+            <div class="card">
+              <h3>Current Attendees</h3>
+              <div id="attendeesList"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Order Modal -->
+    <div id="orderModal" class="modal-overlay hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Create Order</h2>
+          <button onclick="closeOrderModal()" class="secondary">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="orderContent"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const API_URL = "http://127.0.0.1:8080";
+      let authToken = null;
+      let currentUser = null;
+      let currentReservationId = null;
+      let currentOrderReservationId = null;
+      let appData = {
+        rooms: [],
+        tables: [],
+        members: [],
+        reservations: [],
+        menuItems: [],
+        attendees: {},
+      };
+
+      // Login
+      document
+        .getElementById("loginForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const email = document.getElementById("loginEmail").value;
+          const password = document.getElementById("loginPassword").value;
+          await login(email, password);
+        });
+
+      async function quickLogin(email, password) {
+        await login(email, password);
+      }
+
+      async function login(email, password) {
+        try {
+          const formData = new URLSearchParams();
+          formData.append("username", email);
+          formData.append("password", password);
+
+          const response = await fetch(`${API_URL}/api/users/login/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            showError("loginError", error.detail || "Login failed");
+            return;
+          }
+
+          const data = await response.json();
+          authToken = data.access_token;
+          currentUser = data.user;
+
+          document.getElementById("loginScreen").classList.add("hidden");
+          document.getElementById("mainApp").classList.remove("hidden");
+
+          document.getElementById("userWelcome").textContent =
+            `Welcome, ${currentUser.name}!`;
+          document.getElementById("userRole").textContent =
+            currentUser.role.toUpperCase();
+          document.getElementById("userRole").className =
+            `user-badge role-${currentUser.role}`;
+
+          await loadData();
+        } catch (error) {
+          showError("loginError", "Network error: " + error.message);
+        }
+      }
+
+      function logout() {
+        authToken = null;
+        currentUser = null;
+        document.getElementById("loginScreen").classList.remove("hidden");
+        document.getElementById("mainApp").classList.add("hidden");
+        document.getElementById("loginEmail").value = "";
+        document.getElementById("loginPassword").value = "";
+      }
+
+      async function apiCall(endpoint, options = {}) {
+        const headers = {
+          "Content-Type": "application/json",
+          ...options.headers,
+        };
+
+        if (authToken) {
+          headers["Authorization"] = `Bearer ${authToken}`;
+        }
+
+        const response = await fetch(`${API_URL}${endpoint}`, {
+          ...options,
+          headers,
+        });
+
+        const data = await response.json();
+
+        // Check if it's a toast response
+        if (data.status && data.what) {
+          showToast(data);
+          // Return meta for further processing if needed
+          return data.meta || data;
+        }
+
+        if (!response.ok) {
+          throw new Error(data.detail || "API call failed");
+        }
+
+        return data;
+      }
+
+      async function loadData() {
+        try {
+          appData.rooms = await fetch(`${API_URL}/api/dining-rooms`, {
+            headers: { Authorization: `Bearer ${authToken}` },
+          }).then((r) => r.json());
+
+          populateDiningRooms();
+
+          appData.tables = [];
+          for (const room of appData.rooms) {
+            const tables = await fetch(
+              `${API_URL}/api/dining-rooms/${room.id}/tables`,
+              {
+                headers: { Authorization: `Bearer ${authToken}` },
+              },
+            ).then((r) => r.json());
+            appData.tables.push(...tables);
+          }
+
+          appData.members = await fetch(`${API_URL}/api/members`, {
+            headers: { Authorization: `Bearer ${authToken}` },
+          }).then((r) => r.json());
+
+          renderFamilyList();
+
+          appData.reservations = await fetch(`${API_URL}/api/reservations`, {
+            headers: { Authorization: `Bearer ${authToken}` },
+          }).then((r) => r.json());
+
+          renderReservations();
+
+          appData.menuItems = await fetch(`${API_URL}/api/menu-items`, {
+            headers: { Authorization: `Bearer ${authToken}` },
+          }).then((r) => r.json());
+
+          renderMenu();
+        } catch (error) {
+          alert("Error loading data: " + error.message);
+        }
+      }
+
+      function populateDiningRooms() {
+        const select = document.getElementById("diningRoomSelect");
+        select.innerHTML = '<option value="">Select a room...</option>';
+        appData.rooms.forEach((room) => {
+          const option = document.createElement("option");
+          option.value = room.id;
+          option.textContent = `${room.name} (Capacity: ${room.capacity})`;
+          select.appendChild(option);
+        });
+      }
+
+      document
+        .getElementById("diningRoomSelect")
+        .addEventListener("change", (e) => {
+          const roomId = parseInt(e.target.value);
+          const select = document.getElementById("tableSelect");
+          select.innerHTML = '<option value="">Select a table...</option>';
+
+          if (roomId) {
+            const tables = appData.tables.filter(
+              (t) => t.dining_room_id === roomId,
+            );
+            tables.forEach((table) => {
+              const option = document.createElement("option");
+              option.value = table.id;
+              option.textContent = `Table ${table.table_number} (${table.seat_count} seats)`;
+              select.appendChild(option);
+            });
+          }
+        });
+
+      // Create Reservation
+      document
+        .getElementById("createReservationForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          try {
+            const partySize = document.getElementById("partySize").value;
+            const result = await apiCall("/api/reservations", {
+              method: "POST",
+              body: JSON.stringify({
+                dining_room_id: parseInt(
+                  document.getElementById("diningRoomSelect").value,
+                ),
+                table_id: parseInt(
+                  document.getElementById("tableSelect").value,
+                ),
+                date: document.getElementById("resDate").value,
+                meal_type: document.getElementById("mealType").value,
+                start_time: document.getElementById("startTime").value + ":00",
+                end_time: document.getElementById("endTime").value + ":00",
+                party_size: partySize ? parseInt(partySize) : null,
+                notes: document.getElementById("resNotes").value,
+              }),
+            });
+
+            e.target.reset();
+            await loadData();
+          } catch (error) {
+            alert("Error: " + error.message);
+          }
+        });
+
+      // Create Family Member
+      document
+        .getElementById("createMemberForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          try {
+            await fetch(`${API_URL}/api/members`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                name: document.getElementById("memberName").value,
+                relation: document.getElementById("memberRelation").value,
+              }),
+            });
+
+            alert("Family member added!");
+            e.target.reset();
+            await loadData();
+          } catch (error) {
+            alert("Error: " + error.message);
+          }
+        });
+
+      function renderFamilyList() {
+        const div = document.getElementById("familyList");
+        if (appData.members.length === 0) {
+          div.innerHTML = "<p>No family members yet.</p>";
+          return;
+        }
+
+        div.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Relation</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${appData.members
+                .map(
+                  (m) => `
+                <tr>
+                  <td>${m.name}</td>
+                  <td>${m.relation}</td>
+                </tr>
+              `,
+                )
+                .join("")}
+            </tbody>
+          </table>
+        `;
+      }
+
+      function renderReservations() {
+        const upcoming = document.getElementById("upcomingReservations");
+        const futureRes = appData.reservations.filter(
+          (r) => new Date(r.date) >= new Date(),
+        );
+
+        if (futureRes.length === 0) {
+          upcoming.innerHTML = "<li>No upcoming reservations</li>";
+        } else {
+          upcoming.innerHTML = futureRes
+            .slice(0, 5)
+            .map(
+              (r) => `
+            <li>
+              <div>
+                <strong>${r.date}</strong> - ${r.meal_type}<br>
+                <small>Party size: ${r.party_size || 0}</small>
+              </div>
+              <span class="badge badge-${r.status}">${r.status}</span>
+            </li>
+          `,
+            )
+            .join("");
+        }
+
+        const all = document.getElementById("allReservations");
+        if (appData.reservations.length === 0) {
+          all.innerHTML = "<p>No reservations yet.</p>";
+        } else {
+          all.innerHTML = `
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Meal</th>
+                  <th>Time</th>
+                  <th>Party</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${appData.reservations
+                  .map(
+                    (r) => `
+                  <tr>
+                    <td>${r.date}</td>
+                    <td>${r.meal_type}</td>
+                    <td>${r.start_time}</td>
+                    <td>${r.party_size || 0}</td>
+                    <td><span class="badge badge-${r.status}">${r.status}</span></td>
+                    <td>
+                      <div class="action-btns">
+                        <button onclick="openAttendeeModal(${r.id})">Attendees</button>
+                        <button onclick="openOrderModal(${r.id})">Order</button>
+                      </div>
+                    </td>
+                  </tr>
+                `,
+                  )
+                  .join("")}
+              </tbody>
+            </table>
+          `;
+        }
+      }
+
+      function renderMenu() {
+        const div = document.getElementById("menuList");
+        const categories = [
+          ...new Set(appData.menuItems.map((i) => i.category)),
+        ];
+
+        div.innerHTML = categories
+          .map(
+            (cat) => `
+          <h3 style="margin-top: 20px; text-transform: capitalize;">${cat}</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${appData.menuItems
+                .filter((i) => i.category === cat)
+                .map(
+                  (item) => `
+                <tr>
+                  <td><strong>${item.name}</strong></td>
+                  <td>${item.description || ""}</td>
+                  <td>$${item.price}</td>
+                </tr>
+              `,
+                )
+                .join("")}
+            </tbody>
+          </table>
+        `,
+          )
+          .join("");
+      }
+
+      // Attendee Modal
+      async function openAttendeeModal(reservationId) {
+        currentReservationId = reservationId;
+        document.getElementById("attendeeModal").classList.remove("hidden");
+
+        // Populate family member dropdown
+        const select = document.getElementById("attendeeMemberSelect");
+        select.innerHTML =
+          '<option value="">-- Or enter guest name below --</option>';
+        appData.members.forEach((m) => {
+          const option = document.createElement("option");
+          option.value = m.id;
+          option.textContent = `${m.name} (${m.relation})`;
+          select.appendChild(option);
+        });
+
+        // Load existing attendees
+        await loadAttendees(reservationId);
+      }
+
+      async function loadAttendees(reservationId) {
+        try {
+          const attendees = await fetch(
+            `${API_URL}/api/reservation-attendees/reservation/${reservationId}`,
+            {
+              headers: { Authorization: `Bearer ${authToken}` },
+            },
+          ).then((r) => r.json());
+
+          const div = document.getElementById("attendeesList");
+          if (attendees.length === 0) {
+            div.innerHTML = "<p>No attendees yet. Add some above!</p>";
+          } else {
+            div.innerHTML = `
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${attendees
+                    .map(
+                      (a) => `
+                    <tr>
+                      <td>${a.name}</td>
+                      <td>${a.attendee_type}</td>
+                    </tr>
+                  `,
+                    )
+                    .join("")}
+                </tbody>
+              </table>
+            `;
+          }
+        } catch (error) {
+          document.getElementById("attendeesList").innerHTML =
+            "<p>Error loading attendees</p>";
+        }
+      }
+
+      function closeAttendeeModal() {
+        document.getElementById("attendeeModal").classList.add("hidden");
+        currentReservationId = null;
+      }
+
+      document
+        .getElementById("addAttendeeForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          try {
+            const memberId = document.getElementById(
+              "attendeeMemberSelect",
+            ).value;
+            const name = document.getElementById("attendeeName").value;
+            const type = document.getElementById("attendeeType").value;
+
+            await fetch(`${API_URL}/api/reservation-attendees`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                reservation_id: currentReservationId,
+                member_id: memberId ? parseInt(memberId) : null,
+                name: name,
+                attendee_type: type,
+              }),
+            });
+
+            e.target.reset();
+            await loadAttendees(currentReservationId);
+            await loadData(); // ← ADD THIS LINE (refreshes reservations)
+            alert("Attendee added!");
+          } catch (error) {
+            alert("Error: " + error.message);
+          }
+        });
+
+      // Auto-fill name when family member selected
+      document
+        .getElementById("attendeeMemberSelect")
+        .addEventListener("change", (e) => {
+          if (e.target.value) {
+            const member = appData.members.find((m) => m.id == e.target.value);
+            if (member) {
+              document.getElementById("attendeeName").value = member.name;
+              document.getElementById("attendeeType").value = "member";
+            }
+          } else {
+            document.getElementById("attendeeName").value = "";
+            document.getElementById("attendeeType").value = "guest";
+          }
+        });
+
+      // Order Modal (simplified placeholder)
+      function openOrderModal(reservationId) {
+        alert(
+          `Order creation for reservation ${reservationId} - Coming in next update!`,
+        );
+      }
+
+      function closeOrderModal() {
+        document.getElementById("orderModal").classList.add("hidden");
+      }
+
+      // Toast System
+      function showToast(toastData) {
+        const existingToast = document.querySelector(".toast");
+        if (existingToast) existingToast.remove();
+
+        const toast = document.createElement("div");
+        toast.className = `toast toast-${toastData.status}`;
+
+        const icons = {
+          success: "✅",
+          error: "❌",
+          warning: "⚠️",
+          loading: "🔄",
+        };
+
+        toast.innerHTML = `
+          <div class="toast-header">
+            <span style="font-size: 24px">${icons[toastData.status] || "ℹ️"}</span>
+            <span>${toastData.what}</span>
+          </div>
+          <div class="toast-body">
+            <div class="toast-5w1h"><strong>👤 WHO:</strong> ${toastData.who}</div>
+            <div class="toast-5w1h"><strong>📅 WHEN:</strong> ${toastData.when}</div>
+            <div class="toast-5w1h"><strong>📍 WHERE:</strong> ${toastData.where}</div>
+            <div class="toast-5w1h"><strong>💔 WHY:</strong> ${toastData.why}</div>
+            <div class="toast-5w1h" style="background: #e3f2fd;"><strong>💡 HOW:</strong> ${toastData.how}</div>
+            ${
+              toastData.actions && toastData.actions.length > 0
+                ? `
+              <div class="toast-actions">
+                ${toastData.actions
+                  .map(
+                    (action, i) => `
+                  <button onclick="handleToastAction('${action.action}', ${JSON.stringify(action.params).replace(/"/g, "&quot;")})" 
+                          class="${i === 0 ? "success" : "secondary"}">
+                    ${action.label}
+                  </button>
+                `,
+                  )
+                  .join("")}
+              </div>
+            `
+                : ""
+            }
+          </div>
+          ${
+            toastData.meta && toastData.meta.response_time_ms
+              ? `
+            <div class="toast-meta">
+              ⏱️ Server responded in ${toastData.meta.response_time_ms}ms
+              ${toastData.meta.reservation_id ? ` • Reservation #${toastData.meta.reservation_id}` : ""}
+            </div>
+          `
+              : ""
+          }
+        `;
+
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+          toast.style.animation = "slideIn 0.3s ease reverse";
+          setTimeout(() => toast.remove(), 300);
+        }, 8000);
+      }
+
+      function handleToastAction(action, params) {
+        switch (action) {
+          case "reload":
+            window.location.reload();
+            break;
+          case "navigate":
+            if (params && params.view) {
+              alert(`Navigate to: ${params.view}`);
+            }
+            break;
+          case "retry":
+            alert("Retry action");
+            break;
+          case "dismiss":
+            document.querySelector(".toast")?.remove();
+            break;
+          default:
+            console.log("Unhandled action:", action, params);
+        }
+      }
+
+      function switchTab(tabName) {
+        document
+          .querySelectorAll(".tab")
+          .forEach((t) => t.classList.remove("active"));
+        event.target.classList.add("active");
+
+        document
+          .querySelectorAll(".tab-content")
+          .forEach((c) => c.classList.remove("active"));
+        document.getElementById(tabName + "Tab").classList.add("active");
+      }
+
+      function showError(elementId, message) {
+        const el = document.getElementById(elementId);
+        el.textContent = message;
+        el.classList.remove("hidden");
+        setTimeout(() => el.classList.add("hidden"), 5000);
+      }
+
+      // Set default date to tomorrow
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      document.getElementById("resDate").valueAsDate = tomorrow;
+    </script>
+  </body>
+</html>

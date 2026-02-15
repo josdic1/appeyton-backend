@@ -1,6 +1,6 @@
 # app/routes/dining_rooms.py
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models.dining_room import DiningRoom
@@ -18,11 +18,25 @@ def list_rooms(
     db: Session = Depends(get_db),
     _user: User = Depends(require_min_role("member")),
 ):
-    """List all active dining rooms (available to all authenticated users)"""
+    """List all active dining rooms with computed capacity"""
     return (
         db.query(DiningRoom)
+        .options(joinedload(DiningRoom.tables))
         .filter(DiningRoom.is_active == True)
         .order_by(DiningRoom.display_order)
+        .all()
+    )
+
+
+@router.get("/tables/all", response_model=list[TableEntityResponse])
+def list_all_tables(
+    db: Session = Depends(get_db),
+    _user: User = Depends(require_min_role("member")),
+):
+    """List all tables across all rooms (for members creating reservations)"""
+    return (
+        db.query(TableEntity)
+        .order_by(TableEntity.dining_room_id, TableEntity.table_number)
         .all()
     )
 
@@ -33,10 +47,13 @@ def get_room(
     db: Session = Depends(get_db),
     _user: User = Depends(require_min_role("member")),
 ):
-    """Get a single dining room"""
-    from fastapi import HTTPException
-    
-    room = db.query(DiningRoom).filter(DiningRoom.id == room_id).first()
+    """Get a single dining room with computed capacity"""
+    room = (
+        db.query(DiningRoom)
+        .options(joinedload(DiningRoom.tables))
+        .filter(DiningRoom.id == room_id)
+        .first()
+    )
     if not room:
         raise HTTPException(status_code=404, detail="Dining room not found")
     return room

@@ -13,6 +13,7 @@ class ReservationCreate(BaseModel):
     meal_type: str
     start_time: time_type
     end_time: time_type
+    party_size: int | None = None  # ← ADD THIS
     notes: str | None = None
     meta: dict[str, Any] | None = None
 
@@ -24,6 +25,7 @@ class ReservationUpdate(BaseModel):
     meal_type: str | None = None
     start_time: time_type | None = None
     end_time: time_type | None = None
+    party_size: int | None = None  # ← ADD THIS
     status: str | None = None
     notes: str | None = None
     meta: dict[str, Any] | None = None
@@ -39,7 +41,7 @@ class ReservationResponse(BaseModel):
     start_time: time_type
     end_time: time_type
     status: str
-    party_size: int  # Computed from attendees
+    party_size: int | None  # ← CHANGE TO OPTIONAL (was required)
     notes: str | None
     meta: dict[str, Any] | None
     created_by_user_id: int | None

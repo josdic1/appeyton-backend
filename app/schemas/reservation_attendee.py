@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class ReservationAttendeeCreate(BaseModel):
+    reservation_id: int  # ← THIS LINE IS CRITICAL
     member_id: Optional[int] = None
     name: Optional[str] = None
     attendee_type: str
@@ -33,7 +34,7 @@ class ReservationAttendeeResponse(BaseModel):
     id: int
     reservation_id: int
     member_id: int | None
-    name: str | None  # ← Change this to allow None
+    name: str
     attendee_type: str
     dietary_restrictions: dict[str, Any] | None
     meta: dict[str, Any] | None

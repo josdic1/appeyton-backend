@@ -1,6 +1,7 @@
 # app/main.py
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.routes import (
     users,
@@ -16,6 +17,7 @@ from app.routes import (
     admin_users,
     ops,
 )
+from app.utils.toast_responses import error_server, error_not_found as toast_not_found
 
 app = FastAPI(
     title="Sterling Catering API",
@@ -64,3 +66,21 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+# Exception handlers (must be at the end)
+@app.exception_handler(404)
+async def not_found_handler(request: Request, exc):
+    """Handle 404 Not Found errors"""
+    return JSONResponse(
+        status_code=404,
+        content=toast_not_found("Page").model_dump()
+    )
+
+@app.exception_handler(500)
+async def server_error_handler(request: Request, exc):
+    """Handle 500 Internal Server errors"""
+    return JSONResponse(
+        status_code=500,
+        content=error_server(str(exc)).model_dump()
+    )

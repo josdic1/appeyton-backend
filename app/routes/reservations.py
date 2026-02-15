@@ -1,5 +1,6 @@
 # app/routes/reservations.py
 from datetime import datetime, timezone
+from time import time
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
@@ -9,9 +10,16 @@ from app.database import get_db
 from app.models.reservation import Reservation
 from app.models.dining_room import DiningRoom
 from app.models.table_entity import TableEntity
-from app.schemas.reservation import ReservationCreate, ReservationUpdate, ReservationResponse
-from app.utils.permissions import require_min_role
 from app.models.user import User
+from app.schemas.reservation import ReservationCreate, ReservationUpdate, ReservationResponse
+from app.schemas.toast import ToastResponse
+from app.utils.permissions import require_min_role
+from app.utils.toast_responses import (
+    success_booking, 
+    error_table_taken, 
+    error_not_found,
+    error_validation
+)
 
 router = APIRouter()
 
@@ -38,39 +46,97 @@ def _assert_table_exists(
     return table
 
 
-@router.post("", response_model=ReservationResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ToastResponse)
 def create_reservation(
     payload: ReservationCreate,
     db: Session = Depends(get_db),
     user: User = Depends(require_min_role("member")),
 ):
-    _assert_table_exists(db, payload.dining_room_id, payload.table_id)
-
-    r = Reservation(
-        user_id=user.id,
-        dining_room_id=payload.dining_room_id,
-        table_id=payload.table_id,
-        date=payload.date,
-        meal_type=payload.meal_type,
-        start_time=payload.start_time,
-        end_time=payload.end_time,
-        notes=payload.notes,
-        meta=getattr(payload, "meta", None),
-        status="pending",
-        created_by_user_id=user.id,
-    )
-    db.add(r)
-
+    """
+    Create a new reservation.
+    
+    Now returns structured toast response with actionable guidance.
+    """
+    start = time()
+    
+    # Validate dining room exists
+    dining_room = db.query(DiningRoom).filter(
+        DiningRoom.id == payload.dining_room_id
+    ).first()
+    if not dining_room:
+        return error_not_found("Dining room", payload.dining_room_id)
+    
+    # Validate table exists
+    table = db.query(TableEntity).filter(
+        TableEntity.id == payload.table_id
+    ).first()
+    if not table:
+        return error_not_found("Table", payload.table_id)
+    
+    # Validate party size
+    if payload.party_size and payload.party_size > table.seat_count:
+        return error_validation(
+            field="party_size",
+            issue=f"exceeds table capacity of {table.seat_count}",
+            suggestion=f"Choose table with {payload.party_size}+ seats available"
+        )
+    
     try:
+        # Create reservation
+        reservation = Reservation(
+            user_id=user.id,
+            dining_room_id=payload.dining_room_id,
+            table_id=payload.table_id,
+            date=payload.date,
+            meal_type=payload.meal_type,
+            start_time=payload.start_time,
+            end_time=payload.end_time,
+            party_size=payload.party_size,  # ← NOW THIS WORKS
+            notes=payload.notes,
+            status="pending",
+            created_by_user_id=user.id,
+        )
+        
+        db.add(reservation)
         db.commit()
+        db.refresh(reservation)
+        
+        elapsed = int((time() - start) * 1000)
+        
+        return success_booking(
+            table_number=table.table_number,
+            party_size=payload.party_size or table.seat_count,
+            user_name=user.name,
+            booking_date=payload.date,
+            start_time=payload.start_time,
+            meal_type=payload.meal_type,
+            dining_room_name=dining_room.name,
+            reservation_id=reservation.id,
+            elapsed_ms=elapsed
+        )
+        
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=409, detail="That table is already booked for that date+meal_type")
-
-    db.refresh(r)
-    # Load attendees for party_size calculation
-    db.refresh(r, ["attendees"])
-    return r
+        
+        # Find alternative tables in same room
+        alternatives = db.query(TableEntity.id, TableEntity.table_number).filter(
+            TableEntity.dining_room_id == payload.dining_room_id,
+            TableEntity.seat_count >= (payload.party_size or 1),
+            ~TableEntity.id.in_(
+                db.query(Reservation.table_id).filter(
+                    Reservation.date == payload.date,
+                    Reservation.meal_type == payload.meal_type,
+                    Reservation.status.in_(["pending", "confirmed"])
+                )
+            )
+        ).limit(3).all()
+        
+        return error_table_taken(
+            table_num=table.table_number,
+            booking_date=payload.date,
+            meal_type=payload.meal_type,
+            alternatives=alternatives
+        )
 
 
 @router.get("", response_model=list[ReservationResponse])

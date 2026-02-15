@@ -26,19 +26,19 @@ def _get_owned_reservation(db: Session, reservation_id: int, user_id: int) -> Re
     return r
 
 
-@router.post("/{reservation_id}/attendees", response_model=ReservationAttendeeResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ReservationAttendeeResponse, status_code=status.HTTP_201_CREATED)
 def create_attendee(
-    reservation_id: int,
     payload: ReservationAttendeeCreate,
     db: Session = Depends(get_db),
     user: User = Depends(require_min_role("member")),
 ):
-    reservation = _get_owned_reservation(db, reservation_id, user.id)
+    """Create attendee - takes reservation_id in the payload body"""
+    reservation = _get_owned_reservation(db, payload.reservation_id, user.id)
     
     # Check table capacity
     table = db.query(TableEntity).filter(TableEntity.id == reservation.table_id).first()
     current_attendees = db.query(ReservationAttendee).filter(
-        ReservationAttendee.reservation_id == reservation_id
+        ReservationAttendee.reservation_id == payload.reservation_id
     ).count()
     
     if table and current_attendees >= table.seat_count:
@@ -55,7 +55,7 @@ def create_attendee(
         payload.name = member.name
 
     a = ReservationAttendee(
-        reservation_id=reservation_id,
+        reservation_id=payload.reservation_id,
         member_id=payload.member_id,
         name=payload.name,
         attendee_type=payload.attendee_type,
@@ -69,32 +69,45 @@ def create_attendee(
     return a
 
 
-@router.get("/{reservation_id}/attendees", response_model=list[ReservationAttendeeResponse])
-def list_attendees(
+@router.get("/reservation/{reservation_id}", response_model=list[ReservationAttendeeResponse])
+def list_reservation_attendees(
     reservation_id: int,
     db: Session = Depends(get_db),
     user: User = Depends(require_min_role("member")),
 ):
-    _get_owned_reservation(db, reservation_id, user.id)
-    return db.query(ReservationAttendee).filter(ReservationAttendee.reservation_id == reservation_id).all()
+    """Get all attendees for a specific reservation"""
+    # Verify reservation exists and user has access
+    reservation = db.query(Reservation).filter(Reservation.id == reservation_id).first()
+    if not reservation:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+    
+    # Members can only see their own reservations
+    if user.role == "member" and reservation.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Not your reservation")
+    
+    # Staff/admin can see any reservation
+    return db.query(ReservationAttendee).filter(
+        ReservationAttendee.reservation_id == reservation_id
+    ).all()
 
 
-@router.patch("/{reservation_id}/attendees/{attendee_id}", response_model=ReservationAttendeeResponse)
+@router.patch("/{attendee_id}", response_model=ReservationAttendeeResponse)
 def update_attendee(
-    reservation_id: int,
     attendee_id: int,
     payload: ReservationAttendeeUpdate,
     db: Session = Depends(get_db),
     user: User = Depends(require_min_role("member")),
 ):
-    _get_owned_reservation(db, reservation_id, user.id)
-
-    a = db.query(ReservationAttendee).filter(
-        ReservationAttendee.id == attendee_id,
-        ReservationAttendee.reservation_id == reservation_id,
-    ).first()
+    """Update an attendee"""
+    a = db.query(ReservationAttendee).filter(ReservationAttendee.id == attendee_id).first()
     if not a:
         raise HTTPException(status_code=404, detail="Attendee not found")
+    
+    # Check ownership
+    reservation = db.query(Reservation).filter(Reservation.id == a.reservation_id).first()
+    assert reservation is not None  # ← ADDED THIS
+    if user.role == "member" and reservation.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Not your reservation")
 
     for k, v in payload.model_dump(exclude_unset=True).items():
         setattr(a, k, v)
@@ -104,21 +117,22 @@ def update_attendee(
     return a
 
 
-@router.delete("/{reservation_id}/attendees/{attendee_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{attendee_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_attendee(
-    reservation_id: int,
     attendee_id: int,
     db: Session = Depends(get_db),
     user: User = Depends(require_min_role("member")),
 ):
-    _get_owned_reservation(db, reservation_id, user.id)
-
-    a = db.query(ReservationAttendee).filter(
-        ReservationAttendee.id == attendee_id,
-        ReservationAttendee.reservation_id == reservation_id,
-    ).first()
+    """Delete an attendee"""
+    a = db.query(ReservationAttendee).filter(ReservationAttendee.id == attendee_id).first()
     if not a:
         raise HTTPException(status_code=404, detail="Attendee not found")
+    
+    # Check ownership
+    reservation = db.query(Reservation).filter(Reservation.id == a.reservation_id).first()
+    assert reservation is not None  # ← ADDED THIS
+    if user.role == "member" and reservation.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Not your reservation")
 
     db.delete(a)
     db.commit()
