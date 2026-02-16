@@ -1,6 +1,5 @@
 # app/routes/reservations.py
 from datetime import datetime, timezone
-from time import time
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
@@ -10,16 +9,9 @@ from app.database import get_db
 from app.models.reservation import Reservation
 from app.models.dining_room import DiningRoom
 from app.models.table_entity import TableEntity
-from app.models.user import User
 from app.schemas.reservation import ReservationCreate, ReservationUpdate, ReservationResponse
-from app.schemas.toast import ToastResponse
 from app.utils.permissions import require_min_role
-from app.utils.toast_responses import (
-    success_booking, 
-    error_table_taken, 
-    error_not_found,
-    error_validation
-)
+from app.models.user import User
 
 router = APIRouter()
 
@@ -46,7 +38,18 @@ def _assert_table_exists(
     return table
 
 
-@router.post("", response_model=ToastResponse)
+# app/routes/reservations.py
+from time import time
+from sqlalchemy.exc import IntegrityError
+from app.schemas.toast import ToastResponse
+from app.utils.toast_responses import (
+    success_booking, 
+    error_table_taken, 
+    error_not_found,
+    error_validation
+)
+
+@router.post("", response_model=ToastResponse)  # ← Changed from ReservationResponse
 def create_reservation(
     payload: ReservationCreate,
     db: Session = Depends(get_db),
@@ -91,7 +94,7 @@ def create_reservation(
             meal_type=payload.meal_type,
             start_time=payload.start_time,
             end_time=payload.end_time,
-            party_size=payload.party_size,  # ← NOW THIS WORKS
+            party_size=payload.party_size,
             notes=payload.notes,
             status="pending",
             created_by_user_id=user.id,

@@ -2,7 +2,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-
 from app.routes import (
     users,
     members,
@@ -10,7 +9,8 @@ from app.routes import (
     reservation_attendees,
     dining_rooms,
     menu_items,
-    orders,
+    orders, 
+    order_items,
     admin_dining_rooms,
     admin_tables,
     admin_menu_items,
@@ -47,6 +47,7 @@ app.include_router(menu_items.router, prefix="/api/menu-items", tags=["menu-item
 
 # Orders - Members order for self, Staff orders for anyone
 app.include_router(orders.router, prefix="/api/orders", tags=["orders"])
+app.include_router(order_items.router, prefix="/api/order-items", tags=["order-items"])
 
 # Admin-only routes
 app.include_router(admin_dining_rooms.router, prefix="/api/admin/dining-rooms", tags=["admin-dining-rooms"])

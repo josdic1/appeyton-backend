@@ -36,9 +36,11 @@ def create_user(user_in: UserCreate, request: Request, db: Session = Depends(get
     return new_user
 
 @router.post("/login/", response_model=TokenResponse)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == form_data.username).first()
-    if not user or not user.check_password(form_data.password):
+def login(payload: UserLogin, db: Session = Depends(get_db)):
+    # Use payload.email since we are receiving a JSON object now
+    user = db.query(User).filter(User.email == payload.email).first()
+    
+    if not user or not user.check_password(payload.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
@@ -56,7 +58,6 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     )
 
     return {"access_token": access_token, "token_type": "bearer", "user": user}
-
 
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: User = Depends(get_current_user)):

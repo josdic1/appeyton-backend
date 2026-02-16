@@ -27,7 +27,7 @@ class MenuItem(Base):
     price: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     is_available: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
 
-    dietary_tags: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
+    dietary_tags: Mapped[list[str] | dict | None] = mapped_column(JSONType, nullable=True)
     display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     created_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)

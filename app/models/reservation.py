@@ -1,16 +1,20 @@
 # app/models/reservation.py
 from __future__ import annotations
-
-from datetime import datetime, timezone, date as date_type, time as time_type
 from typing import TYPE_CHECKING
+from datetime import datetime, timezone, date as date_type, time as time_type
+from decimal import Decimal
 
-from sqlalchemy import String, Text, Date, Time, DateTime, ForeignKey, Index
+from sqlalchemy import Integer, String, ForeignKey, DateTime, Date, Time, Text, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
 if TYPE_CHECKING:
     from app.models.reservation_attendee import ReservationAttendee
+    from app.models.fee import Fee
+    from app.models.reservation_total import ReservationTotal
+    from app.models.reservation_message import ReservationMessage
+    from app.models.order import Order
 
 try:
     from sqlalchemy.dialects.postgresql import JSONB
@@ -57,11 +61,63 @@ class Reservation(Base):
 
     # Relationships
     attendees: Mapped[list["ReservationAttendee"]] = relationship(
-        "ReservationAttendee", back_populates="reservation", cascade="all, delete-orphan"
+        "ReservationAttendee",
+        back_populates="reservation",
+        cascade="all, delete-orphan",
+        lazy="selectin"  # This loads attendees automatically for party_size
     )
-    
-    # Computed property for party_size
+
+    # NEW: Fees and totals
+    fees: Mapped[list["Fee"]] = relationship(
+        "Fee",
+        back_populates="reservation",
+        cascade="all, delete-orphan"
+    )
+
+    totals: Mapped["ReservationTotal | None"] = relationship(
+        "ReservationTotal",
+        back_populates="reservation",
+        uselist=False,
+        cascade="all, delete-orphan"
+    )
+
+    # NEW: Messages
+    messages: Mapped[list["ReservationMessage"]] = relationship(
+        "ReservationMessage",
+        back_populates="reservation",
+        cascade="all, delete-orphan",
+        order_by="ReservationMessage.created_at"
+    )
+
+    # Computed properties
     @property
     def party_size(self) -> int:
         """Computed from number of attendees"""
         return len(self.attendees)
+
+    @party_size.setter
+    def party_size(self, _value: int | None) -> None:
+        """No-op setter.
+
+        `party_size` is computed from attendees.
+
+        Some create/update code paths still include `party_size` in payloads.
+        Without a setter, assigning to a @property raises AttributeError.
+        This setter intentionally ignores assignments to keep the computed
+        behavior while preventing crashes.
+        """
+        return
+
+    @property
+    def total_amount(self) -> Decimal:
+        """Get total amount from ReservationTotal if exists"""
+        if self.totals:
+            return self.totals.total_amount
+        return Decimal("0.00")
+
+    @property
+    def payment_status(self) -> str:
+        """Get payment status from ReservationTotal if exists"""
+        if self.totals:
+            return self.totals.payment_status
+        return "unpaid"

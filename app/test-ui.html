@@ -3,1273 +3,790 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sterling Catering - Test UI</title>
+    <title>Sterling Catering - Room View</title>
     <style>
+      :root {
+        --brand-orange: #eb5638;
+        --brand-orange-hover: #d94a2e;
+        --brand-black: #2b2b2b;
+        --brand-cream: #ebe5c0;
+        --gray-50: #e6e0b8;
+        --gray-200: #d4cea3;
+        --gray-300: #b8b38f;
+        --gray-400: #9a9578;
+        --gray-500: #7a7660;
+        --gray-600: #5a574a;
+        --gray-700: #3d3b33;
+        --success: #5a8a5a;
+      }
+
       * {
+        box-sizing: border-box;
         margin: 0;
         padding: 0;
-        box-sizing: border-box;
       }
 
       body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-        background: #f5f5f5;
-        color: #333;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--brand-cream);
+        color: var(--brand-black);
+        height: 100vh;
+        overflow: hidden;
       }
 
-      .container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 20px;
+      .app-container {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
       }
 
-      header {
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-
-      .user-info {
+      /* TOP BAR */
+      .top-bar {
+        background: var(--brand-black);
+        padding: 1rem 1.5rem;
+        border-bottom: 3px solid var(--brand-orange);
         display: flex;
         justify-content: space-between;
         align-items: center;
       }
 
-      .user-badge {
-        display: inline-block;
-        padding: 8px 16px;
-        border-radius: 20px;
-        font-size: 14px;
-        font-weight: 600;
+      .header-center {
+        text-align: center;
+        flex: 1;
       }
 
-      .role-admin {
-        background: #ff4444;
-        color: white;
-      }
-      .role-staff {
-        background: #4444ff;
-        color: white;
-      }
-      .role-member {
-        background: #44ff44;
-        color: white;
+      .header-center h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--brand-cream);
+        margin-bottom: 0.125rem;
       }
 
-      button {
-        background: #007bff;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 14px;
-        font-weight: 500;
-        transition: background 0.2s;
+      .header-center p {
+        font-size: 0.75rem;
+        color: var(--gray-400);
       }
 
-      button:hover {
-        background: #0056b3;
-      }
-      button.danger {
-        background: #dc3545;
-      }
-      button.danger:hover {
-        background: #c82333;
-      }
-      button.secondary {
-        background: #6c757d;
-      }
-      button.success {
-        background: #28a745;
-      }
-
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 20px;
-        margin-bottom: 20px;
-      }
-
-      .card {
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-
-      .card h2 {
-        margin-bottom: 15px;
-        color: #333;
-        font-size: 18px;
-      }
-
-      .form-group {
-        margin-bottom: 15px;
-      }
-
-      label {
-        display: block;
-        margin-bottom: 5px;
-        font-weight: 500;
-        font-size: 14px;
-      }
-
-      input,
-      select,
-      textarea {
-        width: 100%;
-        padding: 8px 12px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 14px;
-      }
-
-      textarea {
-        min-height: 80px;
-        resize: vertical;
-      }
-
-      .tabs {
+      .top-right {
         display: flex;
-        gap: 10px;
-        margin-bottom: 20px;
-        border-bottom: 2px solid #ddd;
-      }
-
-      .tab {
-        padding: 12px 24px;
-        cursor: pointer;
-        border: none;
-        background: none;
-        font-size: 16px;
-        font-weight: 500;
-        color: #666;
-        border-bottom: 3px solid transparent;
-        margin-bottom: -2px;
-      }
-
-      .tab.active {
-        color: #007bff;
-        border-bottom-color: #007bff;
-      }
-
-      .tab-content {
-        display: none;
-      }
-
-      .tab-content.active {
-        display: block;
-      }
-
-      .item-list {
-        list-style: none;
-      }
-
-      .item-list li {
-        padding: 12px;
-        border-bottom: 1px solid #eee;
-        display: flex;
-        justify-content: space-between;
+        gap: 0.75rem;
         align-items: center;
-      }
-
-      .item-list li:last-child {
-        border-bottom: none;
       }
 
       .badge {
-        display: inline-block;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 12px;
+        padding: 0.5rem 1rem;
+        background: var(--gray-700);
+        color: var(--brand-cream);
+        border-radius: 0.375rem;
+        font-size: 0.75rem;
         font-weight: 600;
       }
 
-      .badge-pending {
-        background: #ffc107;
-        color: #000;
-      }
-      .badge-confirmed {
-        background: #28a745;
-        color: white;
-      }
-      .badge-cancelled {
-        background: #dc3545;
-        color: white;
-      }
-      .badge-incomplete {
-        background: #6c757d;
-        color: white;
-      }
-      .badge-complete {
-        background: #28a745;
-        color: white;
+      .time-badge {
+        background: var(--brand-orange);
+        font-family: "Courier New", monospace;
       }
 
-      .login-container {
-        max-width: 400px;
-        margin: 100px auto;
+      .login-section {
+        background: var(--gray-700);
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
       }
 
-      .quick-login {
-        margin-top: 20px;
-        padding: 15px;
-        background: #f8f9fa;
-        border-radius: 6px;
+      .login-section input {
+        padding: 0.5rem;
+        border: none;
+        border-radius: 0.25rem;
+        font-size: 0.875rem;
+        width: 150px;
       }
 
-      .quick-login h3 {
-        margin-bottom: 10px;
-        font-size: 14px;
+      .login-section button {
+        padding: 0.5rem 1rem;
+        background: var(--brand-orange);
+        color: white;
+        border: none;
+        border-radius: 0.25rem;
+        cursor: pointer;
+        font-weight: 600;
       }
 
-      .quick-login-btns {
+      .login-section button:hover {
+        background: var(--brand-orange-hover);
+      }
+
+      /* MAIN LAYOUT */
+      .main-layout {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 1fr 400px;
+        overflow: hidden;
+      }
+
+      /* LEFT: TABLES GRID */
+      .tables-grid-container {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        overflow: hidden;
       }
 
-      .quick-login-btns button {
-        text-align: left;
-        padding: 8px 12px;
-        font-size: 13px;
+      .room-header {
+        padding: 2rem 2rem 1rem 2rem;
+        background: var(--brand-cream);
       }
 
-      .alert {
-        padding: 12px;
-        border-radius: 6px;
-        margin-bottom: 15px;
+      .room-header h2 {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
       }
 
-      .alert-error {
-        background: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
+      .room-header p {
+        color: var(--gray-500);
+        font-size: 0.875rem;
       }
 
-      .alert-success {
-        background: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
+      .tables-grid {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem 2rem 2rem 2rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 3rem;
+        align-content: start;
       }
 
-      .hidden {
-        display: none !important;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 10px;
-      }
-
-      th,
-      td {
-        padding: 10px;
-        text-align: left;
-        border-bottom: 1px solid #eee;
-      }
-
-      th {
-        background: #f8f9fa;
-        font-weight: 600;
-        font-size: 13px;
-      }
-
-      td {
-        font-size: 14px;
-      }
-
-      .action-btns {
+      .table-view {
         display: flex;
-        gap: 5px;
+        justify-content: center;
+        align-items: center;
+        padding: 2rem;
       }
 
-      .action-btns button {
-        padding: 5px 10px;
-        font-size: 12px;
-      }
-
-      /* Modal Styles */
-      .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
+      .table-container {
+        position: relative;
+        width: 280px;
+        height: 280px;
         display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .table-center {
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        background: var(--brand-black);
+        border: 4px solid var(--brand-orange);
+        display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        z-index: 1000;
+        color: var(--brand-cream);
+        cursor: pointer;
+        transition: all 150ms;
+        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        position: relative;
+        z-index: 1;
       }
 
-      .modal-content {
-        background: white;
-        border-radius: 8px;
-        max-width: 800px;
-        width: 90%;
-        max-height: 90vh;
-        overflow-y: auto;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      .table-center:hover {
+        transform: scale(1.05);
       }
 
-      .modal-header {
-        padding: 20px;
-        border-bottom: 1px solid #eee;
+      .table-center strong {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+      }
+
+      .table-center span {
+        font-size: 0.875rem;
+        opacity: 0.9;
+      }
+
+      .res-badge {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: var(--brand-orange);
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.6875rem;
+        font-weight: 700;
+      }
+
+      .seat {
+        position: absolute;
+        width: 75px;
+        height: 75px;
+        border-radius: 50%;
         display: flex;
-        justify-content: space-between;
+        flex-direction: column;
         align-items: center;
-      }
-
-      .modal-header h2 {
-        margin: 0;
-        font-size: 20px;
-      }
-
-      .modal-body {
-        padding: 20px;
-      }
-
-      .modal-footer {
-        padding: 20px;
-        border-top: 1px solid #eee;
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-      }
-
-      /* Toast Styles */
-      .toast {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        width: 400px;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        z-index: 2000;
-        animation: slideIn 0.3s ease;
-      }
-
-      @keyframes slideIn {
-        from {
-          transform: translateX(450px);
-          opacity: 0;
-        }
-        to {
-          transform: translateX(0);
-          opacity: 1;
-        }
-      }
-
-      .toast-header {
-        padding: 15px;
-        border-bottom: 1px solid #eee;
-        display: flex;
-        align-items: center;
-        gap: 10px;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+        font-size: 0.75rem;
         font-weight: 600;
+        border: 3px solid var(--brand-black);
+        box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        transform: translate(-50%, -50%);
       }
 
-      .toast-body {
-        padding: 15px;
+      .seat:hover {
+        transform: translate(-50%, -50%) scale(1.2);
+        z-index: 10;
+        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
       }
 
-      .toast-5w1h {
-        margin-bottom: 10px;
-        padding: 8px;
-        background: #f8f9fa;
-        border-radius: 4px;
-        font-size: 13px;
+      .seat.member {
+        background: var(--success);
+        color: var(--brand-cream);
       }
 
-      .toast-5w1h strong {
-        color: #007bff;
+      .seat.guest {
+        background: var(--brand-orange);
+        color: var(--brand-cream);
       }
 
-      .toast-actions {
+      .seat.empty {
+        background: var(--gray-200);
+        color: var(--gray-600);
+        border-style: dashed;
+        opacity: 0.6;
+      }
+
+      .seat-name {
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+
+      .seat-indicator {
+        font-size: 1rem;
+        margin-top: 0.125rem;
+      }
+
+      .seat-number {
+        font-size: 1.25rem;
+        font-weight: 700;
+      }
+
+      /* ROOM TABS */
+      .room-tabs {
         display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-top: 15px;
+        gap: 0.5rem;
+        padding: 1rem 1.5rem;
+        background: var(--gray-700);
+        border-top: 2px solid var(--brand-orange);
+        overflow-x: auto;
       }
 
-      .toast-actions button {
-        flex: 1;
+      .room-tab-label {
+        font-size: 0.625rem;
+        font-weight: 700;
+        color: var(--gray-400);
+        letter-spacing: 0.05em;
+        margin-right: 1rem;
+        align-self: center;
+      }
+
+      .room-tab {
+        padding: 0.75rem 1rem;
+        background: var(--gray-600);
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: all 150ms;
         min-width: 120px;
       }
 
-      .toast-meta {
-        padding: 10px 15px;
-        background: #f8f9fa;
-        border-top: 1px solid #eee;
-        font-size: 11px;
-        color: #666;
+      .room-tab:hover {
+        background: var(--gray-500);
       }
 
-      .toast-success {
-        border-left: 4px solid #28a745;
+      .room-tab.active {
+        background: var(--brand-orange);
       }
-      .toast-error {
-        border-left: 4px solid #dc3545;
+
+      .room-tab-title {
+        font-weight: 700;
+        color: var(--brand-cream);
+        margin-bottom: 0.25rem;
+        font-size: 0.875rem;
       }
-      .toast-warning {
-        border-left: 4px solid #ffc107;
+
+      .room-tab-info {
+        font-size: 0.75rem;
+        color: var(--gray-200);
+      }
+
+      /* RIGHT: DETAIL PANEL */
+      .detail-panel {
+        background: var(--gray-50);
+        border-left: 3px solid var(--brand-orange);
+        overflow-y: auto;
+        padding: 2rem;
+      }
+
+      .detail-empty {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--gray-500);
+        font-size: 0.875rem;
+      }
+
+      .detail-content {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      .detail-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--gray-300);
+      }
+
+      .detail-header h3 {
+        font-size: 1.25rem;
+      }
+
+      .status-badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.375rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .status-confirmed {
+        background: var(--success);
+        color: white;
+      }
+
+      .status-pending {
+        background: var(--brand-orange);
+        color: white;
+      }
+
+      .detail-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .detail-section h4 {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .detail-section p {
+        font-size: 0.875rem;
+        color: var(--gray-600);
+        line-height: 1.5;
+      }
+
+      .attendee-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .attendee-item {
+        padding: 1rem;
+        background: white;
+        border-radius: 0.5rem;
+        border-left: 3px solid var(--success);
+      }
+
+      .attendee-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+      }
+
+      .attendee-type {
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .attendee-type.member {
+        background: var(--success);
+        color: white;
+      }
+
+      .attendee-type.guest {
+        background: var(--brand-orange);
+        color: white;
+      }
+
+      .dietary-tags {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .tag {
+        padding: 0.25rem 0.5rem;
+        background: var(--gray-200);
+        color: var(--gray-700);
+        border-radius: 0.25rem;
+        font-size: 0.6875rem;
+        font-weight: 600;
+      }
+
+      .loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        font-size: 1.25rem;
+        color: var(--gray-500);
       }
     </style>
   </head>
   <body>
-    <!-- Login Screen -->
-    <div id="loginScreen" class="login-container">
-      <div class="card">
-        <h2>Sterling Catering - Login</h2>
-        <div id="loginError" class="alert alert-error hidden"></div>
-        <form id="loginForm">
-          <div class="form-group">
-            <label>Email</label>
-            <input type="email" id="loginEmail" required />
+    <div class="app-container">
+      <!-- TOP BAR -->
+      <div class="top-bar">
+        <div></div>
+        <div class="header-center">
+          <h1>Sterling Catering</h1>
+          <p>Reservation & Seating Management</p>
+        </div>
+        <div class="top-right">
+          <div id="loginSection" class="login-section">
+            <input
+              type="email"
+              id="emailInput"
+              placeholder="Email"
+              value="josh@josh.com"
+            />
+            <input
+              type="password"
+              id="passwordInput"
+              placeholder="Password"
+              value="1111"
+            />
+            <button onclick="login()">Login</button>
           </div>
-          <div class="form-group">
-            <label>Password</label>
-            <input type="password" id="loginPassword" required />
-          </div>
-          <button type="submit">Login</button>
-        </form>
-
-        <div class="quick-login">
-          <h3>Quick Login (Test Accounts)</h3>
-          <div class="quick-login-btns">
-            <button
-              onclick="quickLogin('josh@josh.com', '1111')"
-              class="role-admin"
-            >
-              🔑 Admin - Josh Dicker
-            </button>
-          </div>
+          <div class="badge time-badge" id="currentTime"></div>
         </div>
       </div>
-    </div>
 
-    <!-- Main App -->
-    <div id="mainApp" class="hidden">
-      <div class="container">
-        <header>
-          <div class="user-info">
-            <div>
-              <h1>Sterling Catering</h1>
-              <p id="userWelcome"></p>
-            </div>
-            <div>
-              <span id="userRole" class="user-badge"></span>
-              <button
-                onclick="logout()"
-                class="secondary"
-                style="margin-left: 10px"
-              >
-                Logout
-              </button>
-            </div>
+      <!-- MAIN LAYOUT -->
+      <div class="main-layout">
+        <!-- LEFT: TABLES GRID -->
+        <div class="tables-grid-container">
+          <div class="room-header">
+            <h2 id="roomName">Loading...</h2>
+            <p id="roomInfo"></p>
           </div>
-        </header>
-
-        <!-- Tabs -->
-        <div class="tabs">
-          <button class="tab active" onclick="switchTab('dashboard')">
-            Dashboard
-          </button>
-          <button class="tab" onclick="switchTab('reservations')">
-            Reservations
-          </button>
-          <button class="tab" onclick="switchTab('family')">
-            Family Members
-          </button>
-          <button class="tab" onclick="switchTab('menu')">Menu</button>
-        </div>
-
-        <!-- Dashboard Tab -->
-        <div id="dashboardTab" class="tab-content active">
-          <div class="grid">
-            <div class="card">
-              <h2>My Upcoming Reservations</h2>
-              <ul id="upcomingReservations" class="item-list"></ul>
-            </div>
-            <div class="card">
-              <h2>Quick Actions</h2>
-              <div style="display: flex; flex-direction: column; gap: 10px">
-                <button onclick="switchTab('reservations')">
-                  Create Reservation
-                </button>
-                <button onclick="switchTab('family')">Manage Family</button>
-                <button onclick="loadData()">Refresh Data</button>
-              </div>
-            </div>
+          <div class="tables-grid" id="tablesGrid">
+            <div class="loading">Login to view tables</div>
           </div>
+
+          <!-- ROOM TABS -->
+          <div class="room-tabs" id="roomTabs"></div>
         </div>
 
-        <!-- Reservations Tab -->
-        <div id="reservationsTab" class="tab-content">
-          <div class="grid">
-            <div class="card">
-              <h2>Create New Reservation</h2>
-              <form id="createReservationForm">
-                <div class="form-group">
-                  <label>Dining Room</label>
-                  <select id="diningRoomSelect" required></select>
-                </div>
-                <div class="form-group">
-                  <label>Table</label>
-                  <select id="tableSelect" required></select>
-                </div>
-                <div class="form-group">
-                  <label>Date</label>
-                  <input type="date" id="resDate" required />
-                </div>
-                <div class="form-group">
-                  <label>Meal Type</label>
-                  <select id="mealType" required>
-                    <option value="breakfast">Breakfast</option>
-                    <option value="lunch">Lunch</option>
-                    <option value="dinner">Dinner</option>
-                    <option value="brunch">Brunch</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>Start Time</label>
-                  <input type="time" id="startTime" required />
-                </div>
-                <div class="form-group">
-                  <label>End Time</label>
-                  <input type="time" id="endTime" required />
-                </div>
-                <div class="form-group">
-                  <label>Party Size (optional)</label>
-                  <input type="number" id="partySize" min="1" />
-                </div>
-                <div class="form-group">
-                  <label>Notes</label>
-                  <textarea id="resNotes"></textarea>
-                </div>
-                <button type="submit">Create Reservation</button>
-              </form>
-            </div>
-            <div class="card">
-              <h2>All My Reservations</h2>
-              <div id="allReservations"></div>
-            </div>
+        <!-- RIGHT: DETAIL PANEL -->
+        <div class="detail-panel">
+          <div class="detail-empty" id="detailPanel">
+            Select a table to view details
           </div>
-        </div>
-
-        <!-- Family Tab -->
-        <div id="familyTab" class="tab-content">
-          <div class="grid">
-            <div class="card">
-              <h2>Add Family Member</h2>
-              <form id="createMemberForm">
-                <div class="form-group">
-                  <label>Name</label>
-                  <input type="text" id="memberName" required />
-                </div>
-                <div class="form-group">
-                  <label>Relation</label>
-                  <select id="memberRelation" required>
-                    <option value="self">Self</option>
-                    <option value="spouse">Spouse</option>
-                    <option value="partner">Partner</option>
-                    <option value="child">Child</option>
-                    <option value="parent">Parent</option>
-                    <option value="sibling">Sibling</option>
-                    <option value="friend">Friend</option>
-                  </select>
-                </div>
-                <button type="submit">Add Member</button>
-              </form>
-            </div>
-            <div class="card">
-              <h2>My Family Members</h2>
-              <div id="familyList"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Menu Tab -->
-        <div id="menuTab" class="tab-content">
-          <div class="card">
-            <h2>Menu Items</h2>
-            <div id="menuList"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Attendee Modal -->
-    <div id="attendeeModal" class="modal-overlay hidden">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>Manage Attendees</h2>
-          <button onclick="closeAttendeeModal()" class="secondary">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="grid">
-            <div class="card">
-              <h3>Add Attendee</h3>
-              <form id="addAttendeeForm">
-                <div class="form-group">
-                  <label>Select Family Member</label>
-                  <select id="attendeeMemberSelect">
-                    <option value="">-- Or enter guest name below --</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>Name</label>
-                  <input type="text" id="attendeeName" required />
-                </div>
-                <div class="form-group">
-                  <label>Type</label>
-                  <select id="attendeeType" required>
-                    <option value="member">Family Member</option>
-                    <option value="guest">Guest</option>
-                  </select>
-                </div>
-                <button type="submit">Add Attendee</button>
-              </form>
-            </div>
-            <div class="card">
-              <h3>Current Attendees</h3>
-              <div id="attendeesList"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Order Modal -->
-    <div id="orderModal" class="modal-overlay hidden">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>Create Order</h2>
-          <button onclick="closeOrderModal()" class="secondary">✕</button>
-        </div>
-        <div class="modal-body">
-          <div id="orderContent"></div>
         </div>
       </div>
     </div>
 
     <script>
-      const API_URL = "http://127.0.0.1:8080";
-      let authToken = null;
-      let currentUser = null;
-      let currentReservationId = null;
-      let currentOrderReservationId = null;
-      let appData = {
-        rooms: [],
-        tables: [],
-        members: [],
-        reservations: [],
-        menuItems: [],
-        attendees: {},
-      };
+      const API = "http://127.0.0.1:8080";
+      let token = null;
+      let rooms = [];
+      let tables = [];
+      let reservations = [];
+      let activeRoomId = null;
 
-      // Login
-      document
-        .getElementById("loginForm")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          const email = document.getElementById("loginEmail").value;
-          const password = document.getElementById("loginPassword").value;
-          await login(email, password);
-        });
-
-      async function quickLogin(email, password) {
-        await login(email, password);
-      }
-
-      async function login(email, password) {
-        try {
-          const formData = new URLSearchParams();
-          formData.append("username", email);
-          formData.append("password", password);
-
-          const response = await fetch(`${API_URL}/api/users/login/`, {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: formData,
+      // Update time
+      function updateTime() {
+        const now = new Date();
+        document.getElementById("currentTime").textContent =
+          now.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
           });
-
-          if (!response.ok) {
-            const error = await response.json();
-            showError("loginError", error.detail || "Login failed");
-            return;
-          }
-
-          const data = await response.json();
-          authToken = data.access_token;
-          currentUser = data.user;
-
-          document.getElementById("loginScreen").classList.add("hidden");
-          document.getElementById("mainApp").classList.remove("hidden");
-
-          document.getElementById("userWelcome").textContent =
-            `Welcome, ${currentUser.name}!`;
-          document.getElementById("userRole").textContent =
-            currentUser.role.toUpperCase();
-          document.getElementById("userRole").className =
-            `user-badge role-${currentUser.role}`;
-
-          await loadData();
-        } catch (error) {
-          showError("loginError", "Network error: " + error.message);
-        }
       }
+      setInterval(updateTime, 1000);
+      updateTime();
 
-      function logout() {
-        authToken = null;
-        currentUser = null;
-        document.getElementById("loginScreen").classList.remove("hidden");
-        document.getElementById("mainApp").classList.add("hidden");
-        document.getElementById("loginEmail").value = "";
-        document.getElementById("loginPassword").value = "";
-      }
-
-      async function apiCall(endpoint, options = {}) {
+      // API call helper
+      async function api(endpoint, options = {}) {
         const headers = {
           "Content-Type": "application/json",
-          ...options.headers,
+          ...(token && { Authorization: `Bearer ${token}` }),
         };
-
-        if (authToken) {
-          headers["Authorization"] = `Bearer ${authToken}`;
-        }
-
-        const response = await fetch(`${API_URL}${endpoint}`, {
-          ...options,
-          headers,
-        });
-
-        const data = await response.json();
-
-        // Check if it's a toast response
-        if (data.status && data.what) {
-          showToast(data);
-          // Return meta for further processing if needed
-          return data.meta || data;
-        }
-
-        if (!response.ok) {
-          throw new Error(data.detail || "API call failed");
-        }
-
-        return data;
+        const res = await fetch(`${API}${endpoint}`, { ...options, headers });
+        return {
+          ok: res.ok,
+          status: res.status,
+          data: await res.json().catch(() => ({})),
+        };
       }
 
-      async function loadData() {
-        try {
-          appData.rooms = await fetch(`${API_URL}/api/dining-rooms`, {
-            headers: { Authorization: `Bearer ${authToken}` },
-          }).then((r) => r.json());
+      // Login
+      async function login() {
+        const email = document.getElementById("emailInput").value;
+        const password = document.getElementById("passwordInput").value;
 
-          populateDiningRooms();
+        const res = await api("/api/users/login/", {
+          method: "POST",
+          body: JSON.stringify({ email, password }),
+        });
 
-          appData.tables = [];
-          for (const room of appData.rooms) {
-            const tables = await fetch(
-              `${API_URL}/api/dining-rooms/${room.id}/tables`,
-              {
-                headers: { Authorization: `Bearer ${authToken}` },
-              },
-            ).then((r) => r.json());
-            appData.tables.push(...tables);
+        if (res.ok) {
+          token = res.data.access_token;
+          document.getElementById("loginSection").innerHTML = `
+          <div class="badge">Logged in as ${res.data.user.name}</div>
+        `;
+          await loadAllData();
+        } else {
+          alert("Login failed");
+        }
+      }
+
+      // Load all data
+      async function loadAllData() {
+        document.getElementById("tablesGrid").innerHTML =
+          '<div class="loading">Loading...</div>';
+
+        // Fetch rooms first
+        const roomsRes = await api("/api/dining-rooms");
+        rooms = roomsRes.data || [];
+
+        // Then fetch tables for each room
+        tables = [];
+        for (const room of rooms) {
+          const tablesRes = await api(`/api/dining-rooms/${room.id}/tables`);
+          if (tablesRes.ok && tablesRes.data) {
+            tables = tables.concat(tablesRes.data);
           }
-
-          appData.members = await fetch(`${API_URL}/api/members`, {
-            headers: { Authorization: `Bearer ${authToken}` },
-          }).then((r) => r.json());
-
-          renderFamilyList();
-
-          appData.reservations = await fetch(`${API_URL}/api/reservations`, {
-            headers: { Authorization: `Bearer ${authToken}` },
-          }).then((r) => r.json());
-
-          renderReservations();
-
-          appData.menuItems = await fetch(`${API_URL}/api/menu-items`, {
-            headers: { Authorization: `Bearer ${authToken}` },
-          }).then((r) => r.json());
-
-          renderMenu();
-        } catch (error) {
-          alert("Error loading data: " + error.message);
         }
+
+        // Fetch reservations
+        const reservationsRes = await api("/api/reservations");
+        reservations = reservationsRes.data || [];
+
+        // Fetch attendees for each reservation
+        for (const reservation of reservations) {
+          const attendeesRes = await api(
+            `/api/reservation-attendees/reservation/${reservation.id}`,
+          );
+          reservation.attendees = attendeesRes.ok ? attendeesRes.data : [];
+        }
+
+        activeRoomId = rooms[0]?.id;
+        renderRoomTabs();
+        renderTables();
       }
 
-      function populateDiningRooms() {
-        const select = document.getElementById("diningRoomSelect");
-        select.innerHTML = '<option value="">Select a room...</option>';
-        appData.rooms.forEach((room) => {
-          const option = document.createElement("option");
-          option.value = room.id;
-          option.textContent = `${room.name} (Capacity: ${room.capacity})`;
-          select.appendChild(option);
-        });
-      }
-
-      document
-        .getElementById("diningRoomSelect")
-        .addEventListener("change", (e) => {
-          const roomId = parseInt(e.target.value);
-          const select = document.getElementById("tableSelect");
-          select.innerHTML = '<option value="">Select a table...</option>';
-
-          if (roomId) {
-            const tables = appData.tables.filter(
-              (t) => t.dining_room_id === roomId,
+      // Render room tabs
+      function renderRoomTabs() {
+        const html = `
+        <span class="room-tab-label">DINING ROOMS</span>
+        ${rooms
+          .map((room) => {
+            const roomTables = tables.filter(
+              (t) => t.dining_room_id === room.id,
             );
-            tables.forEach((table) => {
-              const option = document.createElement("option");
-              option.value = table.id;
-              option.textContent = `Table ${table.table_number} (${table.seat_count} seats)`;
-              select.appendChild(option);
-            });
-          }
-        });
+            const occupiedCount = reservations.filter(
+              (r) => r.dining_room_id === room.id,
+            ).length;
+            return `
+            <div class="room-tab ${room.id === activeRoomId ? "active" : ""}" 
+                 onclick="switchRoom(${room.id})">
+              <div class="room-tab-title">${room.name}</div>
+              <div class="room-tab-info">${roomTables.length} Tables • ${occupiedCount} Occ</div>
+            </div>
+          `;
+          })
+          .join("")}
+      `;
+        document.getElementById("roomTabs").innerHTML = html;
+      }
 
-      // Create Reservation
-      document
-        .getElementById("createReservationForm")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          try {
-            const partySize = document.getElementById("partySize").value;
-            const result = await apiCall("/api/reservations", {
-              method: "POST",
-              body: JSON.stringify({
-                dining_room_id: parseInt(
-                  document.getElementById("diningRoomSelect").value,
-                ),
-                table_id: parseInt(
-                  document.getElementById("tableSelect").value,
-                ),
-                date: document.getElementById("resDate").value,
-                meal_type: document.getElementById("mealType").value,
-                start_time: document.getElementById("startTime").value + ":00",
-                end_time: document.getElementById("endTime").value + ":00",
-                party_size: partySize ? parseInt(partySize) : null,
-                notes: document.getElementById("resNotes").value,
-              }),
-            });
+      // Switch room
+      function switchRoom(roomId) {
+        activeRoomId = roomId;
+        renderRoomTabs();
+        renderTables();
+      }
 
-            e.target.reset();
-            await loadData();
-          } catch (error) {
-            alert("Error: " + error.message);
-          }
-        });
+      // Calculate seat positions around table
+      function calculateSeatPositions(seatCount) {
+        const tableRadius = 90;
+        const seatRadius = 37.5;
+        const distance = tableRadius + seatRadius + 10;
+        const positions = [];
 
-      // Create Family Member
-      document
-        .getElementById("createMemberForm")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          try {
-            await fetch(`${API_URL}/api/members`, {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${authToken}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                name: document.getElementById("memberName").value,
-                relation: document.getElementById("memberRelation").value,
-              }),
-            });
+        for (let i = 0; i < seatCount; i++) {
+          const angle = (i * 360) / seatCount - 90;
+          const radian = (angle * Math.PI) / 180;
+          positions.push({
+            top: tableRadius + Math.sin(radian) * distance,
+            left: tableRadius + Math.cos(radian) * distance,
+          });
+        }
 
-            alert("Family member added!");
-            e.target.reset();
-            await loadData();
-          } catch (error) {
-            alert("Error: " + error.message);
-          }
-        });
+        return positions;
+      }
 
-      function renderFamilyList() {
-        const div = document.getElementById("familyList");
-        if (appData.members.length === 0) {
-          div.innerHTML = "<p>No family members yet.</p>";
+      // Render tables
+      function renderTables() {
+        const room = rooms.find((r) => r.id === activeRoomId);
+        const roomTables = tables.filter(
+          (t) => t.dining_room_id === activeRoomId,
+        );
+        const roomReservations = reservations.filter(
+          (r) => r.dining_room_id === activeRoomId,
+        );
+
+        document.getElementById("roomName").textContent = room.name;
+        document.getElementById("roomInfo").textContent =
+          `Capacity: ${room.capacity} | Tables: ${roomTables.length}`;
+
+        const html = roomTables
+          .map((table) => {
+            const reservation = roomReservations.find(
+              (r) => r.table_id === table.id,
+            );
+            const attendees = reservation?.attendees || [];
+            const seatPositions = calculateSeatPositions(table.seat_count);
+
+            return `
+          <div class="table-view">
+            <div class="table-container" onclick="showTableDetail(${table.id})">
+              <div class="table-center">
+                ${reservation ? `<span class="res-badge">#${reservation.id}</span>` : ""}
+                <strong>TABLE ${table.table_number}</strong>
+                <span>${attendees.length} / ${table.seat_count}</span>
+              </div>
+              
+              ${seatPositions
+                .map((pos, idx) => {
+                  const attendee = attendees[idx];
+                  const seatClass = attendee ? attendee.attendee_type : "empty";
+                  return `
+                  <div class="seat ${seatClass}" 
+                       style="top: ${pos.top}px; left: ${pos.left}px;"
+                       onclick="event.stopPropagation();">
+                    ${
+                      attendee
+                        ? `
+                      <span class="seat-name">${attendee.name}</span>
+                      <span class="seat-indicator">✓</span>
+                    `
+                        : `
+                      <span class="seat-number">${idx + 1}</span>
+                    `
+                    }
+                  </div>
+                `;
+                })
+                .join("")}
+            </div>
+          </div>
+        `;
+          })
+          .join("");
+
+        document.getElementById("tablesGrid").innerHTML =
+          html || '<div class="loading">No tables in this room</div>';
+      }
+
+      // Show table detail
+      function showTableDetail(tableId) {
+        const table = tables.find((t) => t.id === tableId);
+        const reservation = reservations.find((r) => r.table_id === tableId);
+
+        if (!reservation) {
+          document.getElementById("detailPanel").innerHTML = `
+          <div class="detail-content">
+            <h3>Table ${table.table_number}</h3>
+            <p>No active reservation</p>
+          </div>
+        `;
           return;
         }
 
-        div.innerHTML = `
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Relation</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${appData.members
-                .map(
-                  (m) => `
-                <tr>
-                  <td>${m.name}</td>
-                  <td>${m.relation}</td>
-                </tr>
-              `,
-                )
-                .join("")}
-            </tbody>
-          </table>
-        `;
-      }
+        const attendees = reservation.attendees || [];
 
-      function renderReservations() {
-        const upcoming = document.getElementById("upcomingReservations");
-        const futureRes = appData.reservations.filter(
-          (r) => new Date(r.date) >= new Date(),
-        );
-
-        if (futureRes.length === 0) {
-          upcoming.innerHTML = "<li>No upcoming reservations</li>";
-        } else {
-          upcoming.innerHTML = futureRes
-            .slice(0, 5)
-            .map(
-              (r) => `
-            <li>
-              <div>
-                <strong>${r.date}</strong> - ${r.meal_type}<br>
-                <small>Party size: ${r.party_size || 0}</small>
-              </div>
-              <span class="badge badge-${r.status}">${r.status}</span>
-            </li>
-          `,
-            )
-            .join("");
-        }
-
-        const all = document.getElementById("allReservations");
-        if (appData.reservations.length === 0) {
-          all.innerHTML = "<p>No reservations yet.</p>";
-        } else {
-          all.innerHTML = `
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Meal</th>
-                  <th>Time</th>
-                  <th>Party</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${appData.reservations
-                  .map(
-                    (r) => `
-                  <tr>
-                    <td>${r.date}</td>
-                    <td>${r.meal_type}</td>
-                    <td>${r.start_time}</td>
-                    <td>${r.party_size || 0}</td>
-                    <td><span class="badge badge-${r.status}">${r.status}</span></td>
-                    <td>
-                      <div class="action-btns">
-                        <button onclick="openAttendeeModal(${r.id})">Attendees</button>
-                        <button onclick="openOrderModal(${r.id})">Order</button>
-                      </div>
-                    </td>
-                  </tr>
-                `,
-                  )
-                  .join("")}
-              </tbody>
-            </table>
-          `;
-        }
-      }
-
-      function renderMenu() {
-        const div = document.getElementById("menuList");
-        const categories = [
-          ...new Set(appData.menuItems.map((i) => i.category)),
-        ];
-
-        div.innerHTML = categories
-          .map(
-            (cat) => `
-          <h3 style="margin-top: 20px; text-transform: capitalize;">${cat}</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Price</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${appData.menuItems
-                .filter((i) => i.category === cat)
-                .map(
-                  (item) => `
-                <tr>
-                  <td><strong>${item.name}</strong></td>
-                  <td>${item.description || ""}</td>
-                  <td>$${item.price}</td>
-                </tr>
-              `,
-                )
-                .join("")}
-            </tbody>
-          </table>
-        `,
-          )
-          .join("");
-      }
-
-      // Attendee Modal
-      async function openAttendeeModal(reservationId) {
-        currentReservationId = reservationId;
-        document.getElementById("attendeeModal").classList.remove("hidden");
-
-        // Populate family member dropdown
-        const select = document.getElementById("attendeeMemberSelect");
-        select.innerHTML =
-          '<option value="">-- Or enter guest name below --</option>';
-        appData.members.forEach((m) => {
-          const option = document.createElement("option");
-          option.value = m.id;
-          option.textContent = `${m.name} (${m.relation})`;
-          select.appendChild(option);
-        });
-
-        // Load existing attendees
-        await loadAttendees(reservationId);
-      }
-
-      async function loadAttendees(reservationId) {
-        try {
-          const attendees = await fetch(
-            `${API_URL}/api/reservation-attendees/reservation/${reservationId}`,
-            {
-              headers: { Authorization: `Bearer ${authToken}` },
-            },
-          ).then((r) => r.json());
-
-          const div = document.getElementById("attendeesList");
-          if (attendees.length === 0) {
-            div.innerHTML = "<p>No attendees yet. Add some above!</p>";
-          } else {
-            div.innerHTML = `
-              <table>
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Type</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${attendees
-                    .map(
-                      (a) => `
-                    <tr>
-                      <td>${a.name}</td>
-                      <td>${a.attendee_type}</td>
-                    </tr>
-                  `,
-                    )
-                    .join("")}
-                </tbody>
-              </table>
-            `;
-          }
-        } catch (error) {
-          document.getElementById("attendeesList").innerHTML =
-            "<p>Error loading attendees</p>";
-        }
-      }
-
-      function closeAttendeeModal() {
-        document.getElementById("attendeeModal").classList.add("hidden");
-        currentReservationId = null;
-      }
-
-      document
-        .getElementById("addAttendeeForm")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          try {
-            const memberId = document.getElementById(
-              "attendeeMemberSelect",
-            ).value;
-            const name = document.getElementById("attendeeName").value;
-            const type = document.getElementById("attendeeType").value;
-
-            await fetch(`${API_URL}/api/reservation-attendees`, {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${authToken}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                reservation_id: currentReservationId,
-                member_id: memberId ? parseInt(memberId) : null,
-                name: name,
-                attendee_type: type,
-              }),
-            });
-
-            e.target.reset();
-            await loadAttendees(currentReservationId);
-            await loadData(); // ← ADD THIS LINE (refreshes reservations)
-            alert("Attendee added!");
-          } catch (error) {
-            alert("Error: " + error.message);
-          }
-        });
-
-      // Auto-fill name when family member selected
-      document
-        .getElementById("attendeeMemberSelect")
-        .addEventListener("change", (e) => {
-          if (e.target.value) {
-            const member = appData.members.find((m) => m.id == e.target.value);
-            if (member) {
-              document.getElementById("attendeeName").value = member.name;
-              document.getElementById("attendeeType").value = "member";
-            }
-          } else {
-            document.getElementById("attendeeName").value = "";
-            document.getElementById("attendeeType").value = "guest";
-          }
-        });
-
-      // Order Modal (simplified placeholder)
-      function openOrderModal(reservationId) {
-        alert(
-          `Order creation for reservation ${reservationId} - Coming in next update!`,
-        );
-      }
-
-      function closeOrderModal() {
-        document.getElementById("orderModal").classList.add("hidden");
-      }
-
-      // Toast System
-      function showToast(toastData) {
-        const existingToast = document.querySelector(".toast");
-        if (existingToast) existingToast.remove();
-
-        const toast = document.createElement("div");
-        toast.className = `toast toast-${toastData.status}`;
-
-        const icons = {
-          success: "✅",
-          error: "❌",
-          warning: "⚠️",
-          loading: "🔄",
-        };
-
-        toast.innerHTML = `
-          <div class="toast-header">
-            <span style="font-size: 24px">${icons[toastData.status] || "ℹ️"}</span>
-            <span>${toastData.what}</span>
+        const html = `
+        <div class="detail-content">
+          <div class="detail-header">
+            <h3>Reservation #${reservation.id}</h3>
+            <span class="status-badge status-${reservation.status}">${reservation.status}</span>
           </div>
-          <div class="toast-body">
-            <div class="toast-5w1h"><strong>👤 WHO:</strong> ${toastData.who}</div>
-            <div class="toast-5w1h"><strong>📅 WHEN:</strong> ${toastData.when}</div>
-            <div class="toast-5w1h"><strong>📍 WHERE:</strong> ${toastData.where}</div>
-            <div class="toast-5w1h"><strong>💔 WHY:</strong> ${toastData.why}</div>
-            <div class="toast-5w1h" style="background: #e3f2fd;"><strong>💡 HOW:</strong> ${toastData.how}</div>
-            ${
-              toastData.actions && toastData.actions.length > 0
-                ? `
-              <div class="toast-actions">
-                ${toastData.actions
-                  .map(
-                    (action, i) => `
-                  <button onclick="handleToastAction('${action.action}', ${JSON.stringify(action.params).replace(/"/g, "&quot;")})" 
-                          class="${i === 0 ? "success" : "secondary"}">
-                    ${action.label}
-                  </button>
-                `,
-                  )
-                  .join("")}
-              </div>
-            `
-                : ""
-            }
+          
+          <div class="detail-section">
+            <h4>Reservation Details</h4>
+            <p><strong>Table:</strong> ${table.table_number}</p>
+            <p><strong>Party Size:</strong> ${reservation.party_size || attendees.length}</p>
+            <p><strong>Date:</strong> ${reservation.date}</p>
+            <p><strong>Time:</strong> ${reservation.start_time} - ${reservation.end_time}</p>
+            <p><strong>Meal Type:</strong> ${reservation.meal_type}</p>
           </div>
+          
           ${
-            toastData.meta && toastData.meta.response_time_ms
+            attendees.length > 0
               ? `
-            <div class="toast-meta">
-              ⏱️ Server responded in ${toastData.meta.response_time_ms}ms
-              ${toastData.meta.reservation_id ? ` • Reservation #${toastData.meta.reservation_id}` : ""}
+            <div class="detail-section">
+              <h4>Attendees (${attendees.length})</h4>
+              <div class="attendee-list">
+                ${attendees
+                  .map((attendee, idx) => {
+                    const dietary = attendee.dietary_restrictions || {};
+                    const tags = Object.entries(dietary)
+                      .filter(([_, v]) => v)
+                      .map(([k]) => k);
+                    return `
+                    <div class="attendee-item">
+                      <div class="attendee-info">
+                        <strong>Seat ${idx + 1}: ${attendee.name}</strong>
+                        <span class="attendee-type ${attendee.attendee_type}">${attendee.attendee_type}</span>
+                      </div>
+                      ${
+                        tags.length > 0
+                          ? `
+                        <div class="dietary-tags">
+                          ${tags.map((tag) => `<span class="tag">${tag}</span>`).join("")}
+                        </div>
+                      `
+                          : ""
+                      }
+                    </div>
+                  `;
+                  })
+                  .join("")}
+              </div>
             </div>
           `
               : ""
           }
-        `;
+        </div>
+      `;
 
-        document.body.appendChild(toast);
-
-        setTimeout(() => {
-          toast.style.animation = "slideIn 0.3s ease reverse";
-          setTimeout(() => toast.remove(), 300);
-        }, 8000);
+        document.getElementById("detailPanel").innerHTML = html;
       }
-
-      function handleToastAction(action, params) {
-        switch (action) {
-          case "reload":
-            window.location.reload();
-            break;
-          case "navigate":
-            if (params && params.view) {
-              alert(`Navigate to: ${params.view}`);
-            }
-            break;
-          case "retry":
-            alert("Retry action");
-            break;
-          case "dismiss":
-            document.querySelector(".toast")?.remove();
-            break;
-          default:
-            console.log("Unhandled action:", action, params);
-        }
-      }
-
-      function switchTab(tabName) {
-        document
-          .querySelectorAll(".tab")
-          .forEach((t) => t.classList.remove("active"));
-        event.target.classList.add("active");
-
-        document
-          .querySelectorAll(".tab-content")
-          .forEach((c) => c.classList.remove("active"));
-        document.getElementById(tabName + "Tab").classList.add("active");
-      }
-
-      function showError(elementId, message) {
-        const el = document.getElementById(elementId);
-        el.textContent = message;
-        el.classList.remove("hidden");
-        setTimeout(() => el.classList.add("hidden"), 5000);
-      }
-
-      // Set default date to tomorrow
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      document.getElementById("resDate").valueAsDate = tomorrow;
     </script>
   </body>
 </html>

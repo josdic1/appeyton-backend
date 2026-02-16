@@ -1,29 +1,23 @@
 # app/routes/reservation_attendees.py
+from __future__ import annotations
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.member import Member
 from app.models.reservation import Reservation
 from app.models.reservation_attendee import ReservationAttendee
-from app.models.member import Member
 from app.models.table_entity import TableEntity
+from app.models.user import User
 from app.schemas.reservation_attendee import (
     ReservationAttendeeCreate,
-    ReservationAttendeeUpdate,
     ReservationAttendeeResponse,
+    ReservationAttendeeUpdate,
 )
 from app.utils.permissions import require_min_role
-from app.models.user import User
 
 router = APIRouter()
-
-
-def _get_owned_reservation(db: Session, reservation_id: int, user_id: int) -> Reservation:
-    """Helper to ensure member can only access their own reservations"""
-    r = db.query(Reservation).filter(Reservation.id == reservation_id, Reservation.user_id == user_id).first()
-    if not r:
-        raise HTTPException(status_code=404, detail="Reservation not found")
-    return r
 
 
 @router.post("", response_model=ReservationAttendeeResponse, status_code=status.HTTP_201_CREATED)
@@ -32,41 +26,80 @@ def create_attendee(
     db: Session = Depends(get_db),
     user: User = Depends(require_min_role("member")),
 ):
-    """Create attendee - takes reservation_id in the payload body"""
-    reservation = _get_owned_reservation(db, payload.reservation_id, user.id)
-    
-    # Check table capacity
-    table = db.query(TableEntity).filter(TableEntity.id == reservation.table_id).first()
-    current_attendees = db.query(ReservationAttendee).filter(
-        ReservationAttendee.reservation_id == payload.reservation_id
-    ).count()
-    
-    if table and current_attendees >= table.seat_count:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Cannot add attendee: table capacity is {table.seat_count}"
-        )
+    """Create attendee (member or guest) with safe, consistent rules.
 
-    # If it's a member, fetch their name
-    if payload.member_id and not payload.name:
+    Rules enforced (matches your frontend behavior):
+    - guest: name is required; member_id must be null
+    - member: member_id is required; name is derived from Member.name
+    - do not exceed table seat_count
+    """
+    reservation = db.query(Reservation).filter(Reservation.id == payload.reservation_id).first()
+    if not reservation:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+
+    if user.role == "member" and reservation.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Not your reservation")
+
+    attendee_type = (payload.attendee_type or "").strip().lower()
+    if attendee_type not in {"member", "guest"}:
+        raise HTTPException(status_code=400, detail="attendee_type must be 'member' or 'guest'")
+
+    # Enforce table capacity
+    table = db.query(TableEntity).filter(TableEntity.id == reservation.table_id).first()
+    if table:
+        current_attendees = db.query(ReservationAttendee).filter(
+            ReservationAttendee.reservation_id == payload.reservation_id
+        ).count()
+        if current_attendees >= table.seat_count:
+            raise HTTPException(
+                status_code=409,
+                detail=f"TABLE FULL! Seats: {table.seat_count}, Current: {current_attendees}. Choose bigger table.",
+            )
+
+    attendee_name: str
+    member_id: int | None = None
+    dietary = payload.dietary_restrictions
+
+    if attendee_type == "guest":
+        raw_name = (payload.name or "").strip()
+        if not raw_name:
+            raise HTTPException(status_code=400, detail="Guest name required")
+        if payload.member_id is not None:
+            raise HTTPException(status_code=400, detail="member_id must be null for guest attendees")
+        attendee_name = raw_name
+
+    else:  # member
+        if not payload.member_id:
+            raise HTTPException(status_code=400, detail="member_id is required for member attendees")
+
         member = db.query(Member).filter(Member.id == payload.member_id).first()
         if not member:
             raise HTTPException(status_code=404, detail="Member not found")
-        payload.name = member.name
 
-    a = ReservationAttendee(
+        # Prevent linking someone else's family member record
+        if member.user_id != reservation.user_id:
+            raise HTTPException(status_code=403, detail="Member does not belong to reservation owner")
+
+        member_id = member.id
+        attendee_name = member.name
+
+        # If not overridden, inherit member dietary restrictions
+        if dietary is None and member.dietary_restrictions:
+            dietary = member.dietary_restrictions
+
+    attendee = ReservationAttendee(
         reservation_id=payload.reservation_id,
-        member_id=payload.member_id,
-        name=payload.name,
-        attendee_type=payload.attendee_type,
-        dietary_restrictions=payload.dietary_restrictions,
+        member_id=member_id,
+        name=attendee_name,
+        attendee_type=attendee_type,
+        dietary_restrictions=dietary,
         meta=payload.meta,
         created_by_user_id=user.id,
     )
-    db.add(a)
+    db.add(attendee)
     db.commit()
-    db.refresh(a)
-    return a
+    db.refresh(attendee)
+    return attendee
 
 
 @router.get("/reservation/{reservation_id}", response_model=list[ReservationAttendeeResponse])
@@ -75,17 +108,14 @@ def list_reservation_attendees(
     db: Session = Depends(get_db),
     user: User = Depends(require_min_role("member")),
 ):
-    """Get all attendees for a specific reservation"""
-    # Verify reservation exists and user has access
+    """Get all attendees for a reservation."""
     reservation = db.query(Reservation).filter(Reservation.id == reservation_id).first()
     if not reservation:
         raise HTTPException(status_code=404, detail="Reservation not found")
-    
-    # Members can only see their own reservations
+
     if user.role == "member" and reservation.user_id != user.id:
         raise HTTPException(status_code=403, detail="Not your reservation")
-    
-    # Staff/admin can see any reservation
+
     return db.query(ReservationAttendee).filter(
         ReservationAttendee.reservation_id == reservation_id
     ).all()
@@ -98,23 +128,48 @@ def update_attendee(
     db: Session = Depends(get_db),
     user: User = Depends(require_min_role("member")),
 ):
-    """Update an attendee"""
-    a = db.query(ReservationAttendee).filter(ReservationAttendee.id == attendee_id).first()
-    if not a:
+    """Update attendee safely.
+
+    Requirement: prevent setting name to None on update.
+    - If name is None: ignore (do not null it)
+    - If name is empty/blank: reject
+    - If attendee is a 'member': ignore name updates (name is derived identity)
+    """
+    attendee = db.query(ReservationAttendee).filter(ReservationAttendee.id == attendee_id).first()
+    if not attendee:
         raise HTTPException(status_code=404, detail="Attendee not found")
-    
-    # Check ownership
-    reservation = db.query(Reservation).filter(Reservation.id == a.reservation_id).first()
-    assert reservation is not None  # ← ADDED THIS
+
+    reservation = db.query(Reservation).filter(Reservation.id == attendee.reservation_id).first()
+    if not reservation:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+
     if user.role == "member" and reservation.user_id != user.id:
         raise HTTPException(status_code=403, detail="Not your reservation")
 
-    for k, v in payload.model_dump(exclude_unset=True).items():
-        setattr(a, k, v)
+    data = payload.model_dump(exclude_unset=True)
+
+    # Never allow nulling name (or blanking it)
+    if "name" in data:
+        proposed = data.get("name")
+        if proposed is None:
+            # ignore attempt to null name
+            data.pop("name", None)
+        else:
+            proposed = proposed.strip()
+            if not proposed:
+                raise HTTPException(status_code=400, detail="Name cannot be empty")
+            if attendee.attendee_type == "member":
+                # member attendee name is derived from Member; ignore updates
+                data.pop("name", None)
+            else:
+                data["name"] = proposed
+
+    for k, v in data.items():
+        setattr(attendee, k, v)
 
     db.commit()
-    db.refresh(a)
-    return a
+    db.refresh(attendee)
+    return attendee
 
 
 @router.delete("/{attendee_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -123,17 +178,18 @@ def delete_attendee(
     db: Session = Depends(get_db),
     user: User = Depends(require_min_role("member")),
 ):
-    """Delete an attendee"""
-    a = db.query(ReservationAttendee).filter(ReservationAttendee.id == attendee_id).first()
-    if not a:
+    """Delete attendee."""
+    attendee = db.query(ReservationAttendee).filter(ReservationAttendee.id == attendee_id).first()
+    if not attendee:
         raise HTTPException(status_code=404, detail="Attendee not found")
-    
-    # Check ownership
-    reservation = db.query(Reservation).filter(Reservation.id == a.reservation_id).first()
-    assert reservation is not None  # ← ADDED THIS
+
+    reservation = db.query(Reservation).filter(Reservation.id == attendee.reservation_id).first()
+    if not reservation:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+
     if user.role == "member" and reservation.user_id != user.id:
         raise HTTPException(status_code=403, detail="Not your reservation")
 
-    db.delete(a)
+    db.delete(attendee)
     db.commit()
     return None
