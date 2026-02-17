@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # seed_db.py
 import sys
 import bcrypt
@@ -15,7 +16,7 @@ from app.models.menu_item import MenuItem
 
 load_dotenv()
 
-# #3 — Production guard
+# Production guard
 # Prevents accidental wipe of production database
 if os.getenv("ENVIRONMENT") == "production":
     print("❌ Refusing to seed a production database. Aborting.")
@@ -31,18 +32,28 @@ SessionLocal = sessionmaker(bind=engine)
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-
-def drop_all_tables():
-    print("Dropping all tables...")
-    Base.metadata.drop_all(bind=engine)
-    print("✅ All tables dropped")
-
-
-def create_all_tables():
-    print("Creating all tables...")
-    Base.metadata.create_all(bind=engine)
-    print("✅ All tables created")
-
+def clear_data():
+    """
+    Clears all rows from tables without dropping the tables themselves.
+    This preserves the 'alembic_version' table so your migrations stay in sync.
+    """
+    db = SessionLocal()
+    try:
+        print("Emptying tables...")
+        # RESTART IDENTITY resets primary key counters to 1
+        # CASCADE ensures dependent rows are deleted in the correct order
+        db.execute(text("""
+            TRUNCATE menu_items, table_entities, dining_rooms, members, users 
+            RESTART IDENTITY CASCADE;
+        """))
+        db.commit()
+        print("✅ All data cleared. Tables and Schema preserved.")
+    except Exception as e:
+        db.rollback()
+        print(f"❌ Error clearing data: {e}")
+        sys.exit(1)
+    finally:
+        db.close()
 
 def seed_data():
     db = SessionLocal()
@@ -369,19 +380,6 @@ def seed_data():
         print(f"   Tables: {db.query(TableEntity).count()}")
         print(f"   Menu Items: {db.query(MenuItem).count()}")
         
-        print("\n👤 Login Credentials:")
-        print("   Admins:")
-        print("     josh@josh.com / 1111")
-        print("     jill@a.com / 1111")
-        print("   Staff:")
-        print("     mark@s.com / 1111")
-        print("     jenns@s.com / 1111")
-        print("   Members:")
-        print("     gabe@m.com / 1111")
-        print("     sarah@m.com / 1111")
-        print("     jaime@m.com / 1111")
-        print("="*60)
-        
     except Exception as e:
         print(f"\n❌ Error seeding database: {e}")
         db.rollback()
@@ -389,14 +387,13 @@ def seed_data():
     finally:
         db.close()
 
-
 if __name__ == "__main__":
-    print("🗑️  WARNING: This will delete ALL existing data!")
+    print("🗑️  WARNING: This will TRUNCATE (wipe) all existing data but keep table structure!")
     response = input("Are you sure you want to continue? (yes/no): ")
     
     if response.lower() == 'yes':
-        drop_all_tables()
-        create_all_tables()
+        # Removed drop_all/create_all to keep migrations happy
+        clear_data()
         seed_data()
     else:
         print("❌ Aborted")

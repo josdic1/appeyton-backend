@@ -3,6 +3,8 @@ import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from alembic.config import Config
+from alembic import command
 from app.routes import (
     users,
     members,
@@ -33,6 +35,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+def run_migrations():
+    # Construct path to alembic.ini (up one level from app/)
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    ini_path = os.path.join(base_dir, "alembic.ini")
+    
+    # Configure and run
+    alembic_cfg = Config(ini_path)
+    # Ensure the script location points to the absolute path of the 'alembic' folder
+    alembic_cfg.set_main_option("script_location", os.path.join(base_dir, "alembic"))
+    
+    print("Checking for database migrations...")
+    command.upgrade(alembic_cfg, "head")
+
+# Execute BEFORE the app starts
+run_migrations()
+
+app = FastAPI(redirect_slashes=False)
 
 # Public routes
 app.include_router(users.router, prefix="/api/users", tags=["users"])

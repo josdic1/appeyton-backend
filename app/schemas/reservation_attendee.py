@@ -7,17 +7,17 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class ReservationAttendeeCreate(BaseModel):
-    reservation_id: int  # ← THIS LINE IS CRITICAL
+    reservation_id: int
     member_id: Optional[int] = None
+    seat_id: Optional[int] = None
     name: Optional[str] = None
     attendee_type: str
     dietary_restrictions: Optional[dict] = None
     meta: Optional[dict] = None
-    
+
     @field_validator('name')
     @classmethod
     def validate_name(cls, v, info):
-        # If it's a guest, name is required
         if info.data.get('attendee_type') == 'guest' and not v:
             raise ValueError('Name is required for guests')
         return v
@@ -25,6 +25,7 @@ class ReservationAttendeeCreate(BaseModel):
 
 class ReservationAttendeeUpdate(BaseModel):
     name: str | None = None
+    seat_id: int | None = None
     attendee_type: str | None = None
     dietary_restrictions: dict[str, Any] | None = None
     meta: dict[str, Any] | None = None
@@ -34,7 +35,8 @@ class ReservationAttendeeResponse(BaseModel):
     id: int
     reservation_id: int
     member_id: int | None
-    name: str | None = None   # ← matches the nullable=True on the DB column
+    seat_id: int | None
+    name: str | None = None
     attendee_type: str
     dietary_restrictions: dict[str, Any] | None
     meta: dict[str, Any] | None

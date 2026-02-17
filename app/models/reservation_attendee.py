@@ -10,6 +10,7 @@ from app.database import Base
 
 if TYPE_CHECKING:
     from app.models.reservation import Reservation
+    from app.models.seat import Seat
 
 try:
     from sqlalchemy.dialects.postgresql import JSONB  # type: ignore
@@ -24,6 +25,7 @@ class ReservationAttendee(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     reservation_id: Mapped[int] = mapped_column(ForeignKey("reservations.id", ondelete="CASCADE"), nullable=False, index=True)
     member_id: Mapped[int | None] = mapped_column(ForeignKey("members.id"), nullable=True)
+    seat_id: Mapped[int | None] = mapped_column(ForeignKey("seats.id", ondelete="SET NULL"), nullable=True, index=True)
     name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     attendee_type: Mapped[str] = mapped_column(String(20), nullable=False)
     dietary_restrictions: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
@@ -39,6 +41,7 @@ class ReservationAttendee(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
-    
-    # Relationship back to reservation
+
+    # Relationships
     reservation: Mapped["Reservation"] = relationship("Reservation", back_populates="attendees")
+    seat: Mapped["Seat | None"] = relationship("Seat")
