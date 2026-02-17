@@ -43,6 +43,34 @@ def create_table(
     db.refresh(t)
     return t
 
+@router.patch("/{table_id}", response_model=TableEntityResponse)
+def update_table(
+    table_id: int,
+    payload: TableEntityUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    scope: str = Depends(get_permission("Table", "write")),
+):
+    if scope != "all":
+        raise HTTPException(status_code=403, detail="Admin scope required")
+
+    t = db.query(TableEntity).filter(TableEntity.id == table_id).first()
+    if not t:
+        raise HTTPException(status_code=404, detail="Table not found")
+
+    for k, v in payload.model_dump(exclude_unset=True).items():
+        setattr(t, k, v)
+
+    t.updated_by_user_id = user.id
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Table number already exists in that dining room")
+
+    db.refresh(t)
+    return t
+
 @router.delete("/{table_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_table(
     table_id: int,
