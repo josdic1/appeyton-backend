@@ -20,7 +20,6 @@ def create_room(
 ):
     room = DiningRoom(
         name=payload.name,
-        capacity=payload.capacity,
         is_active=payload.is_active,
         display_order=payload.display_order,
         meta=payload.meta,

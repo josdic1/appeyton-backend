@@ -1,5 +1,5 @@
 # app/routes/dining_rooms.py
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
@@ -15,17 +15,14 @@ router = APIRouter()
 
 @router.get("", response_model=list[DiningRoomResponse])
 def list_rooms(
+    active_only: bool = Query(True),
     db: Session = Depends(get_db),
-    _user: User = Depends(require_min_role("member")),
+    user: User = Depends(require_min_role("member")),
 ):
-    """List all active dining rooms with computed capacity"""
-    return (
-        db.query(DiningRoom)
-        .options(joinedload(DiningRoom.tables))
-        .filter(DiningRoom.is_active == True)
-        .order_by(DiningRoom.display_order)
-        .all()
-    )
+    query = db.query(DiningRoom).options(joinedload(DiningRoom.tables))
+    if active_only:
+        query = query.filter(DiningRoom.is_active == True)
+    return query.order_by(DiningRoom.display_order).all()
 
 
 @router.get("/tables/all", response_model=list[TableEntityResponse])
