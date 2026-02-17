@@ -11,7 +11,8 @@ from app.utils.auth import create_access_token, get_current_user
 
 router = APIRouter()
 
-# ── auth ──────────────────────────────────────────────────────────────
+
+# ── Public: no auth required ──────────────────────────────────────────
 @router.post("/login", response_model=TokenResponse)
 def login(payload: UserLogin, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == payload.email).first()
@@ -27,11 +28,6 @@ def login(payload: UserLogin, db: Session = Depends(get_db)):
         "user": user,
     }
 
-# ── CRUD ──────────────────────────────────────────────────────────────
-@router.get("/", response_model=list[UserResponse])
-def get_users(db: Session = Depends(get_db)):
-    return db.query(User).order_by(User.created_at.desc()).all()
-
 @router.post("/", response_model=UserResponse, status_code=201)
 def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == user_in.email).first():
@@ -39,8 +35,8 @@ def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
     user = User(
         email=user_in.email,
         name=user_in.name,
-        role=getattr(user_in, "role", "member"),
-        membership_status=getattr(user_in, "membership_status", "active"),
+        role="member",
+        membership_status="active",
         guest_allowance=4,
     )
     user.set_password(user_in.password)
@@ -49,34 +45,31 @@ def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
     db.refresh(user)
     return user
 
-@router.get("/{user_id}", response_model=UserResponse)
-def get_user(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+
+# ── Authenticated: must be logged in ─────────────────────────────────
+@router.get("/me", response_model=UserResponse)
+def get_me(user: User = Depends(get_current_user)):
+    """Returns the currently logged in user's own profile."""
     return user
 
 
-@router.patch("/{user_id}", response_model=UserResponse)
-def update_user(user_id: int, user_in: UserUpdate, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+@router.patch("/me", response_model=UserResponse)
+def update_me(
+    user_in: UserUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Allows a user to update their own profile only."""
     for field, val in user_in.model_dump(exclude_unset=True).items():
         if field == "password":
             if val:
                 user.set_password(val)
+        elif field in ("role", "membership_status"):
+            # Users cannot change their own role or status — admin only
+            raise HTTPException(status_code=403, detail=f"Cannot self-modify {field}")
         else:
             setattr(user, field, val)
     user.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(user)
     return user
-
-@router.delete("/{user_id}", status_code=204)
-def delete_user(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    db.delete(user)
-    db.commit()

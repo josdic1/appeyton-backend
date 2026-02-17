@@ -1,4 +1,5 @@
 # seed_db.py
+import sys
 import bcrypt
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
@@ -14,6 +15,12 @@ from app.models.menu_item import MenuItem
 
 load_dotenv()
 
+# #3 — Production guard
+# Prevents accidental wipe of production database
+if os.getenv("ENVIRONMENT") == "production":
+    print("❌ Refusing to seed a production database. Aborting.")
+    sys.exit(1)
+
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL not found in .env file")
@@ -26,21 +33,18 @@ def hash_password(password: str) -> str:
 
 
 def drop_all_tables():
-    """Drop all tables in the database"""
     print("Dropping all tables...")
     Base.metadata.drop_all(bind=engine)
     print("✅ All tables dropped")
 
 
 def create_all_tables():
-    """Create all tables"""
     print("Creating all tables...")
     Base.metadata.create_all(bind=engine)
     print("✅ All tables created")
 
 
 def seed_data():
-    """Seed the database with initial data"""
     db = SessionLocal()
     
     try:
@@ -142,7 +146,6 @@ def seed_data():
         # ============================================================
         print("\nCreating family members...")
         
-        # Sarah Scott's family
         sarah_self = Member(
             user_id=sarah.id,
             created_by_user_id=sarah.id,
@@ -170,7 +173,6 @@ def seed_data():
         )
         db.add(zoe)
         
-        # Jaime Aker's family
         jaime_self = Member(
             user_id=jaime.id,
             created_by_user_id=jaime.id,
@@ -198,7 +200,6 @@ def seed_data():
         )
         db.add(nolan)
         
-        # Gabe Scott's family
         gabe_self = Member(
             user_id=gabe.id,
             created_by_user_id=gabe.id,
@@ -273,9 +274,7 @@ def seed_data():
         # ============================================================
         print("\nCreating tables...")
         
-        # Main Hall tables
         tables_data = [
-            # Main Hall
             (main_hall.id, 1, 4, 50, 50),
             (main_hall.id, 2, 4, 150, 50),
             (main_hall.id, 3, 6, 250, 50),
@@ -284,10 +283,8 @@ def seed_data():
             (main_hall.id, 6, 8, 250, 150),
             (main_hall.id, 7, 2, 450, 50),
             (main_hall.id, 8, 2, 450, 100),
-            # Private Room
             (private_room.id, 1, 10, 100, 100),
             (private_room.id, 2, 6, 300, 100),
-            # Terrace
             (terrace.id, 1, 4, 50, 50),
             (terrace.id, 2, 4, 200, 50),
             (terrace.id, 3, 4, 350, 50),
@@ -315,14 +312,11 @@ def seed_data():
         print("\nCreating menu items...")
         
         menu_items = [
-            # Appetizers
             ("Oysters Rockefeller", "Fresh oysters with spinach and parmesan", "appetizer", 18.00, True, ["shellfish"], 1),
             ("Caesar Salad", "Romaine, parmesan, croutons, classic dressing", "appetizer", 14.00, True, [], 2),
             ("Burrata & Tomatoes", "Creamy burrata with heirloom tomatoes and basil", "appetizer", 16.00, True, ["vegetarian"], 3),
             ("Shrimp Cocktail", "Jumbo shrimp with cocktail sauce", "appetizer", 19.00, True, ["shellfish"], 4),
             ("French Onion Soup", "Caramelized onions, gruyere, sourdough", "appetizer", 12.00, True, [], 5),
-            
-            # Entrees
             ("Ribeye Steak", "16oz USDA Prime, aged 28 days", "entree", 58.00, True, [], 1),
             ("Filet Mignon", "8oz center cut tenderloin", "entree", 52.00, True, [], 2),
             ("Grilled Salmon", "Atlantic salmon with lemon butter", "entree", 38.00, True, ["fish"], 3),
@@ -330,20 +324,14 @@ def seed_data():
             ("Roasted Chicken", "Half chicken with herbs and roasted vegetables", "entree", 32.00, True, [], 5),
             ("Vegetarian Risotto", "Seasonal vegetables, parmesan, truffle oil", "entree", 28.00, True, ["vegetarian"], 6),
             ("Lamb Chops", "Grilled New Zealand lamb with mint jus", "entree", 48.00, True, [], 7),
-            
-            # Sides
             ("Truffle Fries", "Hand-cut fries with truffle oil and parmesan", "side", 12.00, True, [], 1),
             ("Creamed Spinach", "Classic steakhouse style", "side", 10.00, True, [], 2),
             ("Asparagus", "Grilled with lemon and olive oil", "side", 11.00, True, ["vegan"], 3),
             ("Mac & Cheese", "Five cheese blend", "side", 13.00, True, [], 4),
-            
-            # Desserts
             ("Crème Brûlée", "Classic French custard with caramelized sugar", "dessert", 14.00, True, [], 1),
             ("Chocolate Lava Cake", "Warm chocolate cake with vanilla ice cream", "dessert", 15.00, True, [], 2),
             ("New York Cheesecake", "Classic cheesecake with berry compote", "dessert", 13.00, True, [], 3),
             ("Tiramisu", "House-made Italian classic", "dessert", 14.00, True, [], 4),
-            
-            # Beverages
             ("Coffee", "Freshly brewed", "beverage", 4.00, True, [], 1),
             ("Espresso", "Double shot", "beverage", 5.00, True, [], 2),
             ("Iced Tea", "House-brewed sweet or unsweet", "beverage", 4.00, True, [], 3),

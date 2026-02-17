@@ -35,13 +35,25 @@ def create_reservation(
     if not table: 
         return error_not_found("Table", payload.table_id)
     
-    # FIXED: Added required 'suggestion' argument
+    # Check party size against table capacity
     if payload.party_size and payload.party_size > table.seat_count:
         return error_validation(
             field="party_size", 
-            issue=f"exceeds capacity {table.seat_count}",
+            issue=f"exceeds table capacity of {table.seat_count}",
             suggestion="Please select a larger table or reduce your party size."
         )
+
+    # Check party size against member's guest allowance
+    # +1 because allowance covers guests only — the member themselves doesn't count against it
+    # Staff and admin are exempt — they book on behalf of others and aren't subject to member limits
+    if payload.party_size and user.role == "member":
+        max_allowed = user.guest_allowance + 1
+        if payload.party_size > max_allowed:
+            return error_validation(
+                field="party_size",
+                issue=f"exceeds your guest allowance of {user.guest_allowance} guests",
+                suggestion=f"Your membership allows up to {user.guest_allowance} guests plus yourself ({max_allowed} total). Contact the club to request an increase."
+            )
 
     try:
         reservation = Reservation(
@@ -69,15 +81,16 @@ def create_reservation(
         db.rollback()
         return error_table_taken(table.table_number, payload.date, payload.meal_type, [])
 
+
 @router.get("", response_model=list[ReservationResponse])
 def list_reservations(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
     scope: str = Depends(get_permission("Reservation", "read"))
 ):
-    # Dynamic scoping for listing
     query = db.query(Reservation).options(joinedload(Reservation.attendees))
     return apply_permission_filter(query, Reservation, scope, user.id).all()
+
 
 @router.patch("/{reservation_id}", response_model=ReservationResponse)
 def update_reservation(
@@ -90,7 +103,6 @@ def update_reservation(
     r = db.query(Reservation).filter(Reservation.id == reservation_id).first()
     if not r: 
         raise HTTPException(404)
-    # Ownership guard
     if scope == "own" and r.user_id != user.id: 
         raise HTTPException(403)
 
@@ -99,6 +111,7 @@ def update_reservation(
     db.commit()
     db.refresh(r)
     return r
+
 
 @router.delete("/{reservation_id}", status_code=204)
 def delete_reservation(

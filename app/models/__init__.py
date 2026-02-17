@@ -1,4 +1,4 @@
-# app/models/__init__.py - COMPLETE VERSION
+# app/models/__init__.py
 
 from app.models.user import User
 from app.models.member import Member
@@ -9,8 +9,6 @@ from app.models.reservation_attendee import ReservationAttendee
 from app.models.menu_item import MenuItem
 from app.models.order import Order
 from app.models.order_item import OrderItem
-
-# New models
 from app.models.activity_log import ActivityLog
 from app.models.audit_trail import AuditTrail
 from app.models.rule import Rule
@@ -20,6 +18,7 @@ from app.models.reservation_message import ReservationMessage
 from app.models.notification import Notification
 from app.models.daily_stat import DailyStat
 from app.models.seat import Seat
+from app.models.system_setting import SystemSetting  # ADD
 
 __all__ = [
     "User",
@@ -40,4 +39,5 @@ __all__ = [
     "Notification",
     "DailyStat",
     "Seat",
+    "SystemSetting",  # ADD
 ]

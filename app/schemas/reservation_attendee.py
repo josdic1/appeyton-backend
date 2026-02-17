@@ -34,7 +34,7 @@ class ReservationAttendeeResponse(BaseModel):
     id: int
     reservation_id: int
     member_id: int | None
-    name: str
+    name: str | None = None   # ← matches the nullable=True on the DB column
     attendee_type: str
     dietary_restrictions: dict[str, Any] | None
     meta: dict[str, Any] | None
