@@ -1,64 +1,81 @@
 # app/routes/users.py
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.user import UserCreate, UserResponse, UserLogin, TokenResponse
+from app.schemas.user import UserCreate, UserUpdate, UserResponse, UserLogin, TokenResponse
 from app.utils.auth import create_access_token, get_current_user
 
 router = APIRouter()
 
-@router.post("/", response_model=UserResponse)
-def create_user(user_in: UserCreate, request: Request, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.email == user_in.email).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="User already exists")
-
-    new_user = User(
-        email=user_in.email,
-        name=user_in.name,
-        phone=user_in.phone,
-        role="member",
-        membership_status="active",
-        guest_allowance=4,
-        meta=None,
-        created_by_user_id=None,
-    )
-    new_user.set_password(user_in.password)
-
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return new_user
-
-@router.post("/login/", response_model=TokenResponse)
+# ── auth ──────────────────────────────────────────────────────────────
+@router.post("/login", response_model=TokenResponse)
 def login(payload: UserLogin, db: Session = Depends(get_db)):
-    # Use payload.email since we are receiving a JSON object now
     user = db.query(User).filter(User.email == payload.email).first()
-    
     if not user or not user.check_password(payload.password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # update last_login_at
+        raise HTTPException(status_code=401, detail="Invalid credentials",
+                            headers={"WWW-Authenticate": "Bearer"})
     user.last_login_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(user)
+    return {
+        "access_token": create_access_token(user_id=user.id, role=user.role),
+        "token_type": "bearer",
+        "user": user,
+    }
 
-    access_token = create_access_token(
-        user_id=user.id,
-        role=user.role,
+# ── CRUD ──────────────────────────────────────────────────────────────
+@router.get("/", response_model=list[UserResponse])
+def get_users(db: Session = Depends(get_db)):
+    return db.query(User).order_by(User.created_at.desc()).all()
+
+@router.post("/", response_model=UserResponse, status_code=201)
+def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
+    if db.query(User).filter(User.email == user_in.email).first():
+        raise HTTPException(status_code=400, detail="Email already registered")
+    user = User(
+        email=user_in.email,
+        name=user_in.name,
+        role=getattr(user_in, "role", "member"),
+        membership_status=getattr(user_in, "membership_status", "active"),
+        guest_allowance=4,
     )
+    user.set_password(user_in.password)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
 
-    return {"access_token": access_token, "token_type": "bearer", "user": user}
+@router.get("/{user_id}", response_model=UserResponse)
+def get_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 
-@router.get("/me", response_model=UserResponse)
-def get_me(current_user: User = Depends(get_current_user)):
-    return current_user
+@router.patch("/{user_id}", response_model=UserResponse)
+def update_user(user_id: int, user_in: UserUpdate, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    for field, val in user_in.model_dump(exclude_unset=True).items():
+        if field == "password":
+            if val:
+                user.set_password(val)
+        else:
+            setattr(user, field, val)
+    user.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(user)
+    return user
+
+@router.delete("/{user_id}", status_code=204)
+def delete_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    db.delete(user)
+    db.commit()

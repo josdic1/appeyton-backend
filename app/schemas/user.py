@@ -31,7 +31,14 @@ class UserResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-
+class UserUpdate(BaseModel):
+    name: str | None = None
+    email: str | None = None
+    password: str | None = None
+    role: str | None = None
+    membership_status: str | None = None
+    guest_allowance: int | None = None
+    
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
