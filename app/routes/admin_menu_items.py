@@ -1,48 +1,45 @@
-# app/routes/admin_menu_items.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.menu_item import MenuItem
 from app.schemas.menu_item import MenuItemCreate, MenuItemUpdate, MenuItemResponse
-from app.utils.permissions import require_min_role
 from app.models.user import User
+from app.utils.permissions import get_current_user, get_permission
 
 router = APIRouter()
-
 
 @router.post("", response_model=MenuItemResponse, status_code=status.HTTP_201_CREATED)
 def create_menu_item(
     payload: MenuItemCreate,
     db: Session = Depends(get_db),
-    admin: User = Depends(require_min_role("admin")),
+    user: User = Depends(get_current_user),
+    scope: str = Depends(get_permission("MenuItem", "write")),
 ):
-    """Create a new menu item (admin only)"""
+    if scope != "all":
+        raise HTTPException(status_code=403, detail="Admin scope required")
+    
     item = MenuItem(
-        name=payload.name,
-        description=payload.description,
-        category=payload.category,
-        price=payload.price,
-        is_available=payload.is_available,
-        dietary_tags=payload.dietary_tags,
-        display_order=payload.display_order,
-        created_by_user_id=admin.id,
-        updated_by_user_id=admin.id,
+        **payload.model_dump(),
+        created_by_user_id=user.id,
+        updated_by_user_id=user.id,
     )
     db.add(item)
     db.commit()
     db.refresh(item)
     return item
 
-
 @router.patch("/{item_id}", response_model=MenuItemResponse)
 def update_menu_item(
     item_id: int,
     payload: MenuItemUpdate,
     db: Session = Depends(get_db),
-    admin: User = Depends(require_min_role("admin")),
+    user: User = Depends(get_current_user),
+    scope: str = Depends(get_permission("MenuItem", "write")),
 ):
-    """Update a menu item (admin only)"""
+    if scope != "all":
+        raise HTTPException(status_code=403, detail="Admin scope required")
+
     item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Menu item not found")
@@ -50,20 +47,21 @@ def update_menu_item(
     for k, v in payload.model_dump(exclude_unset=True).items():
         setattr(item, k, v)
 
-    item.updated_by_user_id = admin.id
-
+    item.updated_by_user_id = user.id
     db.commit()
     db.refresh(item)
     return item
-
 
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_menu_item(
     item_id: int,
     db: Session = Depends(get_db),
-    _admin: User = Depends(require_min_role("admin")),
+    user: User = Depends(get_current_user),
+    scope: str = Depends(get_permission("MenuItem", "delete")),
 ):
-    """Delete a menu item (admin only)"""
+    if scope != "all":
+        raise HTTPException(status_code=403, detail="Admin scope required")
+
     item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Menu item not found")

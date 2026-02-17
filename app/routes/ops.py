@@ -1,6 +1,6 @@
 # app/routes/ops.py
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, Query, HTTPException
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models.user import User
@@ -8,7 +8,7 @@ from app.models.reservation import Reservation
 from app.models.reservation_attendee import ReservationAttendee
 from app.models.dining_room import DiningRoom
 from app.models.table_entity import TableEntity
-from app.utils.permissions import require_min_role
+from app.utils.permissions import get_current_user, get_permission
 
 from app.schemas.user_public import UserPublic
 from app.schemas.reservation import ReservationResponse
@@ -21,24 +21,36 @@ router = APIRouter()
 @router.get("/users", response_model=list[UserPublic])
 def ops_list_users(
     db: Session = Depends(get_db),
-    _staff: User = Depends(require_min_role("staff")),
+    user: User = Depends(get_current_user),
+    scope: str = Depends(get_permission("User", "read")),
 ):
-    # no email/phone in schema
+    """Staff view to list all users. Requires 'all' scope."""
+    if scope != "all":
+        raise HTTPException(status_code=403, detail="Staff access required for user directory")
+        
     return db.query(User).order_by(User.id.desc()).all()
 
 @router.get("/dining-rooms", response_model=list[DiningRoomResponse])
 def ops_list_rooms(
     db: Session = Depends(get_db),
-    _staff: User = Depends(require_min_role("staff")),
+    user: User = Depends(get_current_user),
+    scope: str = Depends(get_permission("DiningRoom", "read")), 
 ):
-    return db.query(DiningRoom).order_by(DiningRoom.display_order.asc(), DiningRoom.id.asc()).all()
+    # LOGIC: If a member has 'all' read in JSON, they can enter. 
+    # If the scope is 'none', they are blocked by the dependency.
+    return db.query(DiningRoom).order_by(DiningRoom.display_order.asc()).all()
 
 @router.get("/tables", response_model=list[TableEntityResponse])
 def ops_list_tables(
     dining_room_id: int | None = Query(None),
     db: Session = Depends(get_db),
-    _staff: User = Depends(require_min_role("staff")),
+    user: User = Depends(get_current_user),
+    scope: str = Depends(get_permission("Table", "read")),
 ):
+    """Staff view of all tables, filterable by room."""
+    if scope != "all":
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        
     q = db.query(TableEntity)
     if dining_room_id is not None:
         q = q.filter(TableEntity.dining_room_id == dining_room_id)
@@ -49,9 +61,14 @@ def ops_list_reservations(
     date: str | None = Query(None, description="YYYY-MM-DD"),
     status: str | None = Query(None),
     db: Session = Depends(get_db),
-    _staff: User = Depends(require_min_role("staff")),
+    user: User = Depends(get_current_user),
+    scope: str = Depends(get_permission("Reservation", "read")),
 ):
-    q = db.query(Reservation)
+    """Staff dashboard view for managing all restaurant bookings."""
+    if scope != "all":
+        raise HTTPException(status_code=403, detail="Access denied to master reservation list")
+        
+    q = db.query(Reservation).options(joinedload(Reservation.attendees))
     if status:
         q = q.filter(Reservation.status == status)
     if date:
@@ -62,8 +79,13 @@ def ops_list_reservations(
 def ops_list_attendees(
     reservation_id: int,
     db: Session = Depends(get_db),
-    _staff: User = Depends(require_min_role("staff")),
+    user: User = Depends(get_current_user),
+    scope: str = Depends(get_permission("Reservation", "read")),
 ):
+    """View guest list for any specific reservation."""
+    if scope != "all":
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        
     return (
         db.query(ReservationAttendee)
         .filter(ReservationAttendee.reservation_id == reservation_id)

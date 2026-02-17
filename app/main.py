@@ -19,20 +19,16 @@ from app.routes import (
 )
 from app.utils.toast_responses import error_server, error_not_found as toast_not_found
 
-app = FastAPI(
-    title="Sterling Catering API",
-    redirect_slashes=True
-)
+app = FastAPI()
 
-# CORS
+# Add this middleware BEFORE your routers
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Update in production
+    allow_origins=["http://localhost:5173"], # Your React dev server
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 # Public routes
 app.include_router(users.router, prefix="/api/users", tags=["users"])
 
@@ -57,7 +53,6 @@ app.include_router(admin_users.router, prefix="/api/admin", tags=["admin"])
 
 # Ops routes (staff/admin)
 app.include_router(ops.router, prefix="/api/ops", tags=["ops"])
-
 
 @app.get("/")
 def root():

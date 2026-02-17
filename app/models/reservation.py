@@ -43,7 +43,8 @@ class Reservation(Base):
     status: Mapped[str] = mapped_column(String(30), default="pending", nullable=False, index=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     meta: Mapped[dict | None] = mapped_column("metadata", JSONType, nullable=True)
-
+ 
+    order: Mapped["Order"] = relationship("Order", back_populates="reservation", uselist=False)
     created_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     cancelled_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
