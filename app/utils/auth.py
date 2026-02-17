@@ -1,4 +1,3 @@
-# utils/auth.py
 # app/utils/auth.py
 import jwt
 from datetime import datetime, timedelta, timezone
@@ -12,6 +11,8 @@ from app.database import get_db
 from app.models.user import User
 
 security = HTTPBearer()
+
+BLOCKED_STATUSES = {"inactive", "suspended"}
 
 
 def create_access_token(user_id: int, role: str) -> str:
@@ -45,11 +46,17 @@ def get_current_user(
         if user is None:
             raise HTTPException(status_code=401, detail="User not found")
 
-        if user.membership_status == "inactive":
-            raise HTTPException(status_code=401, detail="Account deactivated")
+        if user.membership_status in BLOCKED_STATUSES:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Account {user.membership_status}. Contact an administrator."
+            )
 
         return user
 
     except ValueError as e:
-        raise HTTPException(status_code=401, detail=str(e),
-                            headers={"WWW-Authenticate": "Bearer"})
+        raise HTTPException(
+            status_code=401,
+            detail=str(e),
+            headers={"WWW-Authenticate": "Bearer"},
+        )

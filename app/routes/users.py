@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate, UserResponse, UserLogin, TokenResponse
-from app.utils.auth import create_access_token, get_current_user
+from app.utils.auth import create_access_token, get_current_user, BLOCKED_STATUSES
 
 router = APIRouter()
 
@@ -16,9 +16,20 @@ router = APIRouter()
 @router.post("/login", response_model=TokenResponse)
 def login(payload: UserLogin, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == payload.email).first()
+
     if not user or not user.check_password(payload.password):
-        raise HTTPException(status_code=401, detail="Invalid credentials",
-                            headers={"WWW-Authenticate": "Bearer"})
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if user.membership_status in BLOCKED_STATUSES:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Account {user.membership_status}. Contact an administrator.",
+        )
+
     user.last_login_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(user)
@@ -27,6 +38,7 @@ def login(payload: UserLogin, db: Session = Depends(get_db)):
         "token_type": "bearer",
         "user": user,
     }
+
 
 @router.post("/", response_model=UserResponse, status_code=201)
 def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
@@ -65,7 +77,6 @@ def update_me(
             if val:
                 user.set_password(val)
         elif field in ("role", "membership_status"):
-            # Users cannot change their own role or status — admin only
             raise HTTPException(status_code=403, detail=f"Cannot self-modify {field}")
         else:
             setattr(user, field, val)

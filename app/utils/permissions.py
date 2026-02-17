@@ -10,7 +10,7 @@ from app.utils.auth import get_current_user
 from app.database import get_db
 
 # The key we use in system_settings table
-ACL_KEY = "permissions"
+ACL_KEY = "permissions_matrix"
 
 # Fallback default — used only if no row exists in DB yet
 DEFAULT_ACL = {
@@ -63,34 +63,25 @@ DEFAULT_ACL = {
 
 
 def load_acl(db: Session) -> dict:
-    """Read the live permissions from the database.
-    Falls back to DEFAULT_ACL if no row exists yet.
-    """
     setting = db.query(SystemSetting).filter(SystemSetting.key == ACL_KEY).first()
-    if setting is None or setting.value is None:
-        return DEFAULT_ACL
-    return setting.value
+    if setting and setting.value:
+        return setting.value
+    return DEFAULT_ACL
 
 
-def save_acl(db: Session, user_id: int, new_acl: dict, ip: str | None = None):
-    """Write new permissions to the database and log the change."""
-    # Get old values for the audit log
-    old_acl = load_acl(db)
-
-    # Upsert — update if exists, insert if not
+def save_acl(db: Session, user_id: int, new_acl: dict, ip: str | None = None) -> None:
+    # Capture old value before overwriting
     setting = db.query(SystemSetting).filter(SystemSetting.key == ACL_KEY).first()
-    if setting:
-        setting.value = new_acl
-        setting.updated_by_user_id = user_id
-    else:
-        setting = SystemSetting(
-            key=ACL_KEY,
-            value=new_acl,
-            updated_by_user_id=user_id,
-        )
+    old_acl = setting.value if setting else None
+
+    if not setting:
+        setting = SystemSetting(key=ACL_KEY)
         db.add(setting)
 
-    # Log the change
+    setting.value = new_acl
+    setting.updated_by_user_id = user_id
+    db.flush()  # write the setting before logging
+
     log = ActivityLog(
         user_id=user_id,
         action="update_permissions",
@@ -108,7 +99,7 @@ def save_acl(db: Session, user_id: int, new_acl: dict, ip: str | None = None):
 
 def get_permission(entity: str, action: str):
     """FastAPI dependency — checks the ACL and returns the scope.
-    
+
     Returns: 'all' | 'own'
     Raises:  403 if scope is 'none'
     """
@@ -120,8 +111,9 @@ def get_permission(entity: str, action: str):
             return "all"
 
         acl = load_acl(db)
-        role_policy = acl.get(user.role, {}).get(entity, {})
-        scope = role_policy.get(action, "none")
+        role_policy: dict = acl.get(user.role) or {}
+        entity_policy: dict = role_policy.get(entity) or {}
+        scope = entity_policy.get(action, "none")
 
         if scope == "none":
             raise HTTPException(

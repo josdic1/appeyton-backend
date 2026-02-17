@@ -20,7 +20,7 @@ from app.routes import (
 )
 from app.utils.toast_responses import error_server, error_not_found as toast_not_found
 
-app = FastAPI()
+app = FastAPI(redirect_slashes=False)
 
 # Read origins from env — comma-separated list
 # Local default is fallback only, always set this in production

@@ -9,6 +9,31 @@ from app.utils.permissions import get_current_user, get_permission
 
 router = APIRouter()
 
+@router.get("", response_model=list[MenuItemResponse])
+def list_menu_items(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    scope: str = Depends(get_permission("MenuItem", "read")),
+):
+    if scope != "all":
+        raise HTTPException(status_code=403, detail="Admin scope required")
+    return db.query(MenuItem).order_by(MenuItem.category, MenuItem.display_order, MenuItem.name).all()
+
+
+@router.get("/{item_id}", response_model=MenuItemResponse)
+def get_menu_item(
+    item_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    scope: str = Depends(get_permission("MenuItem", "read")),
+):
+    if scope != "all":
+        raise HTTPException(status_code=403, detail="Admin scope required")
+    item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Menu item not found")
+    return item
+
 @router.post("", response_model=MenuItemResponse, status_code=status.HTTP_201_CREATED)
 def create_menu_item(
     payload: MenuItemCreate,
