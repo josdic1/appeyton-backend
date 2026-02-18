@@ -18,10 +18,14 @@ def update_order_item(
     user: User = Depends(get_current_user),
     scope: str = Depends(get_permission("Order", "write")),
 ):
-    # joinedload ensures item.order and order.reservation are available
+    # Load everything needed for the ownership check and the response names
     item = (
         db.query(OrderItem)
-        .options(joinedload(OrderItem.order).joinedload(Order.reservation))
+        .options(
+            joinedload(OrderItem.order).joinedload(Order.reservation),
+            joinedload(OrderItem.menu_item), # Needed for name
+            joinedload(OrderItem.attendee)   # Needed for name
+        )
         .filter(OrderItem.id == item_id)
         .first()
     )
@@ -29,7 +33,6 @@ def update_order_item(
     if not item: 
         raise HTTPException(status_code=404, detail="Item not found")
     
-    # Ownership guard based on Matrix Scope
     if scope == "own":
         if not item.order or not item.order.reservation or item.order.reservation.user_id != user.id:
             raise HTTPException(status_code=403, detail="Not your order item")
@@ -39,6 +42,11 @@ def update_order_item(
     
     db.commit()
     db.refresh(item)
+
+    # Manual mapping for schema convenience fields [cite: 2026-02-18]
+    item.menu_item_name = item.menu_item.name
+    item.attendee_name = item.attendee.name
+    
     return item
 
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)

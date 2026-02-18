@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from app.models.reservation_total import ReservationTotal
     from app.models.reservation_message import ReservationMessage
     from app.models.order import Order
+    from app.models.dining_room import DiningRoom
+    from app.models.table_entity import TableEntity
 
 try:
     from sqlalchemy.dialects.postgresql import JSONB
@@ -41,10 +43,13 @@ class Reservation(Base):
     end_time: Mapped[time_type] = mapped_column(Time, nullable=False)
 
     status: Mapped[str] = mapped_column(String(30), default="pending", nullable=False, index=True)
+    
+    # ── THE KITCHEN TRACKER (FIXES 500 ERROR) ──
+    fired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     meta: Mapped[dict | None] = mapped_column("metadata", JSONType, nullable=True)
  
-    order: Mapped["Order"] = relationship("Order", back_populates="reservation", uselist=False)
     created_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     cancelled_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -60,15 +65,18 @@ class Reservation(Base):
         nullable=False,
     )
 
-    # Relationships
+    # ── RELATIONSHIPS ──
+    dining_room: Mapped["DiningRoom"] = relationship("DiningRoom")
+    table: Mapped["TableEntity"] = relationship("TableEntity")
+    order: Mapped["Order"] = relationship("Order", back_populates="reservation", uselist=False)
+
     attendees: Mapped[list["ReservationAttendee"]] = relationship(
         "ReservationAttendee",
         back_populates="reservation",
         cascade="all, delete-orphan",
-        lazy="selectin"  # This loads attendees automatically for party_size
+        lazy="selectin"
     )
 
-    # NEW: Fees and totals
     fees: Mapped[list["Fee"]] = relationship(
         "Fee",
         back_populates="reservation",
@@ -82,7 +90,6 @@ class Reservation(Base):
         cascade="all, delete-orphan"
     )
 
-    # NEW: Messages
     messages: Mapped[list["ReservationMessage"]] = relationship(
         "ReservationMessage",
         back_populates="reservation",
@@ -90,35 +97,19 @@ class Reservation(Base):
         order_by="ReservationMessage.created_at"
     )
 
-    # Computed properties
+    # ── COMPUTED PROPERTIES ──
     @property
     def party_size(self) -> int:
-        """Computed from number of attendees"""
         return len(self.attendees)
-
-    @party_size.setter
-    def party_size(self, _value: int | None) -> None:
-        """No-op setter.
-
-        `party_size` is computed from attendees.
-
-        Some create/update code paths still include `party_size` in payloads.
-        Without a setter, assigning to a @property raises AttributeError.
-        This setter intentionally ignores assignments to keep the computed
-        behavior while preventing crashes.
-        """
-        return
 
     @property
     def total_amount(self) -> Decimal:
-        """Get total amount from ReservationTotal if exists"""
         if self.totals:
             return self.totals.total_amount
         return Decimal("0.00")
 
     @property
     def payment_status(self) -> str:
-        """Get payment status from ReservationTotal if exists"""
         if self.totals:
             return self.totals.payment_status
         return "unpaid"
