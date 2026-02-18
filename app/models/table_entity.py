@@ -1,4 +1,7 @@
 # app/models/table_entity.py
+# CRITICAL FIX: Removed @event.listens_for auto_generate_seats.
+# admin_tables.py route handles seat creation manually after flush().
+# Having BOTH caused every new table to get double the expected seats.
 from __future__ import annotations
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, List
@@ -11,11 +14,10 @@ if TYPE_CHECKING:
     from app.models.seat import Seat
 
 try:
-    from sqlalchemy.dialects.postgresql import JSONB  # type: ignore
+    from sqlalchemy.dialects.postgresql import JSONB
     JSONType = JSONB
 except Exception:
-    from sqlalchemy import JSON as JSONType  # type: ignore
-
+    from sqlalchemy import JSON as JSONType
 
 class TableEntity(Base):
     __tablename__ = "table_entities"
@@ -44,6 +46,9 @@ class TableEntity(Base):
         nullable=False,
     )
 
-    # Relationships
     dining_room: Mapped["DiningRoom"] = relationship("DiningRoom", back_populates="tables")
-    seats: Mapped[List["Seat"]] = relationship("Seat", back_populates="table", cascade="all, delete-orphan", order_by="Seat.seat_number")
+    seats: Mapped[List["Seat"]] = relationship(
+        "Seat", back_populates="table",
+        cascade="all, delete-orphan",
+        order_by="Seat.seat_number"
+    )

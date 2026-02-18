@@ -5,6 +5,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.reservation_attendee import ReservationAttendeeResponse
+
 
 class ReservationCreate(BaseModel):
     dining_room_id: int
@@ -13,7 +15,7 @@ class ReservationCreate(BaseModel):
     meal_type: str
     start_time: time_type
     end_time: time_type
-    party_size: int | None = None  # ← ADD THIS
+    party_size: int | None = None
     notes: str | None = None
     meta: dict[str, Any] | None = None
 
@@ -25,7 +27,7 @@ class ReservationUpdate(BaseModel):
     meal_type: str | None = None
     start_time: time_type | None = None
     end_time: time_type | None = None
-    party_size: int | None = None  # ← ADD THIS
+    party_size: int | None = None
     status: str | None = None
     notes: str | None = None
     meta: dict[str, Any] | None = None
@@ -41,7 +43,7 @@ class ReservationResponse(BaseModel):
     start_time: time_type
     end_time: time_type
     status: str
-    party_size: int | None  # ← CHANGE TO OPTIONAL (was required)
+    party_size: int | None
     notes: str | None
     meta: dict[str, Any] | None
     created_by_user_id: int | None
@@ -50,5 +52,7 @@ class ReservationResponse(BaseModel):
     cancelled_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    # Attendees embedded so the floor plan doesn't need a second request
+    attendees: list[ReservationAttendeeResponse] = []
 
     model_config = ConfigDict(from_attributes=True)

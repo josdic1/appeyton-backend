@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
 # seed_db.py
 import sys
 import bcrypt
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import os
 from dotenv import load_dotenv
@@ -13,11 +12,11 @@ from app.models.member import Member
 from app.models.dining_room import DiningRoom
 from app.models.table_entity import TableEntity
 from app.models.menu_item import MenuItem
+from app.models.seat import Seat  # <--- CRITICAL IMPORT
 
 load_dotenv()
 
 # Production guard
-# Prevents accidental wipe of production database
 if os.getenv("ENVIRONMENT") == "production":
     print("❌ Refusing to seed a production database. Aborting.")
     sys.exit(1)
@@ -32,28 +31,15 @@ SessionLocal = sessionmaker(bind=engine)
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-def clear_data():
-    """
-    Clears all rows from tables without dropping the tables themselves.
-    This preserves the 'alembic_version' table so your migrations stay in sync.
-    """
-    db = SessionLocal()
-    try:
-        print("Emptying tables...")
-        # RESTART IDENTITY resets primary key counters to 1
-        # CASCADE ensures dependent rows are deleted in the correct order
-        db.execute(text("""
-            TRUNCATE menu_items, table_entities, dining_rooms, members, users 
-            RESTART IDENTITY CASCADE;
-        """))
-        db.commit()
-        print("✅ All data cleared. Tables and Schema preserved.")
-    except Exception as e:
-        db.rollback()
-        print(f"❌ Error clearing data: {e}")
-        sys.exit(1)
-    finally:
-        db.close()
+def drop_all_tables():
+    print("Dropping all tables...")
+    Base.metadata.drop_all(bind=engine)
+    print("✅ All tables dropped")
+
+def create_all_tables():
+    print("Creating all tables...")
+    Base.metadata.create_all(bind=engine)
+    print("✅ All tables created")
 
 def seed_data():
     db = SessionLocal()
@@ -62,249 +48,94 @@ def seed_data():
         print("\n🌱 Seeding database...")
         
         # ============================================================
-        # USERS
+        # 1. USERS
         # ============================================================
         print("\nCreating users...")
         
-        josh = User(
-            email="josh@josh.com",
-            name="Josh Dicker",
-            phone="555-1212",
-            password_hash=hash_password("1111"),
-            role="admin",
-            membership_status="active",
-            guest_allowance=10
-        )
-        db.add(josh)
-        db.flush()
+        josh = User(email="josh@josh.com", name="Josh Dicker", phone="555-1212", password_hash=hash_password("1111"), role="admin", membership_status="active", guest_allowance=10)
+        jill = User(email="jill@a.com", name="Jill Kaiser", phone="555-1234", password_hash=hash_password("1111"), role="admin", membership_status="active", guest_allowance=8)
+        mark = User(email="mark@s.com", name="Mark Cranberry", phone="555-1234", password_hash=hash_password("1111"), role="staff", membership_status="active", guest_allowance=0)
+        jenna = User(email="jenns@s.com", name="Jenna Wray", phone="555-1234", password_hash=hash_password("1111"), role="staff", membership_status="active", guest_allowance=0)
+        gabe = User(email="gabe@m.com", name="Gabe Scott", phone="555-1112", password_hash=hash_password("1111"), role="member", membership_status="active", guest_allowance=4)
+        sarah = User(email="sarah@m.com", name="Sarah Scott", phone="555-1111", password_hash=hash_password("1111"), role="member", membership_status="active", guest_allowance=6)
+        jaime = User(email="jaime@m.com", name="Jaime Aker", phone="555-1113", password_hash=hash_password("1111"), role="member", membership_status="active", guest_allowance=5)
         
-        jill = User(
-            email="jill@a.com",
-            name="Jill Kaiser",
-            phone="555-1234",
-            password_hash=hash_password("1111"),
-            role="admin",
-            membership_status="active",
-            guest_allowance=8
-        )
-        db.add(jill)
-        db.flush()
-        
-        mark = User(
-            email="mark@s.com",
-            name="Mark Cranberry",
-            phone="555-1234",
-            password_hash=hash_password("1111"),
-            role="staff",
-            membership_status="active",
-            guest_allowance=0
-        )
-        db.add(mark)
-        db.flush()
-        
-        jenna = User(
-            email="jenns@s.com",
-            name="Jenna Wray",
-            phone="555-1234",
-            password_hash=hash_password("1111"),
-            role="staff",
-            membership_status="active",
-            guest_allowance=0
-        )
-        db.add(jenna)
-        db.flush()
-        
-        gabe = User(
-            email="gabe@m.com",
-            name="Gabe Scott",
-            phone="555-1112",
-            password_hash=hash_password("1111"),
-            role="member",
-            membership_status="active",
-            guest_allowance=4
-        )
-        db.add(gabe)
-        db.flush()
-        
-        sarah = User(
-            email="sarah@m.com",
-            name="Sarah Scott",
-            phone="555-1111",
-            password_hash=hash_password("1111"),
-            role="member",
-            membership_status="active",
-            guest_allowance=6
-        )
-        db.add(sarah)
-        db.flush()
-        
-        jaime = User(
-            email="jaime@m.com",
-            name="Jaime Aker",
-            phone="555-1113",
-            password_hash=hash_password("1111"),
-            role="member",
-            membership_status="active",
-            guest_allowance=5
-        )
-        db.add(jaime)
-        db.flush()
-        
+        db.add_all([josh, jill, mark, jenna, gabe, sarah, jaime])
+        db.flush() 
         print(f"✅ Created {db.query(User).count()} users")
         
         # ============================================================
-        # MEMBERS (Family Members)
+        # 2. FAMILY MEMBERS
         # ============================================================
         print("\nCreating family members...")
         
-        sarah_self = Member(
-            user_id=sarah.id,
-            created_by_user_id=sarah.id,
-            name="Sarah Scott",
-            relation="Self",
-            dietary_restrictions={"preferences": ["no cilantro"], "notes": "Prefers white wine"}
-        )
-        db.add(sarah_self)
-        
-        reed = Member(
-            user_id=sarah.id,
-            created_by_user_id=sarah.id,
-            name="Reed Edwards",
-            relation="Spouse",
-            dietary_restrictions={"allergies": ["shellfish"], "preferences": ["medium-rare steak"]}
-        )
-        db.add(reed)
-        
-        zoe = Member(
-            user_id=sarah.id,
-            created_by_user_id=sarah.id,
-            name="Zoe Scott-Edwards",
-            relation="Daughter",
-            dietary_restrictions={"allergies": ["tree nuts"], "preferences": ["no vegetables"], "notes": "Picky eater"}
-        )
-        db.add(zoe)
-        
-        jaime_self = Member(
-            user_id=jaime.id,
-            created_by_user_id=jaime.id,
-            name="Jaime Aker",
-            relation="Self",
-            dietary_restrictions={"preferences": ["vegetarian"], "notes": "Loves spicy food"}
-        )
-        db.add(jaime_self)
-        
-        nat = Member(
-            user_id=jaime.id,
-            created_by_user_id=jaime.id,
-            name="Nat Aker",
-            relation="Spouse",
-            dietary_restrictions={"allergies": ["dairy", "gluten"], "preferences": ["vegan options preferred"]}
-        )
-        db.add(nat)
-        
-        nolan = Member(
-            user_id=jaime.id,
-            created_by_user_id=jaime.id,
-            name="Nolan Aker",
-            relation="Son",
-            dietary_restrictions={"allergies": ["peanuts", "eggs"], "notes": "Severe peanut allergy - EpiPen required"}
-        )
-        db.add(nolan)
-        
-        gabe_self = Member(
-            user_id=gabe.id,
-            created_by_user_id=gabe.id,
-            name="Gabe Scott",
-            relation="Self",
-            dietary_restrictions={"preferences": ["rare steak", "bourbon"], "notes": "Carnivore"}
-        )
-        db.add(gabe_self)
-        
-        palmer = Member(
-            user_id=gabe.id,
-            created_by_user_id=gabe.id,
-            name="Palmer Scott",
-            relation="Daughter",
-            dietary_restrictions={"preferences": ["pasta", "chicken fingers"], "notes": "Age 8"}
-        )
-        db.add(palmer)
-        
-        miller = Member(
-            user_id=gabe.id,
-            created_by_user_id=gabe.id,
-            name="Miller Scott",
-            relation="Daughter",
-            dietary_restrictions={"allergies": ["fish"], "preferences": ["pizza", "mac and cheese"], "notes": "Age 5"}
-        )
-        db.add(miller)
+        # Sarah's Family
+        db.add(Member(user_id=sarah.id, created_by_user_id=sarah.id, name="Sarah Scott", relation="Self", dietary_restrictions={"preferences": ["no cilantro"], "notes": "Prefers white wine"}))
+        db.add(Member(user_id=sarah.id, created_by_user_id=sarah.id, name="Reed Edwards", relation="Spouse", dietary_restrictions={"allergies": ["shellfish"], "preferences": ["medium-rare steak"]}))
+        db.add(Member(user_id=sarah.id, created_by_user_id=sarah.id, name="Zoe Scott-Edwards", relation="Daughter", dietary_restrictions={"allergies": ["tree nuts"], "preferences": ["no vegetables"], "notes": "Picky eater"}))
+
+        # Jaime's Family
+        db.add(Member(user_id=jaime.id, created_by_user_id=jaime.id, name="Jaime Aker", relation="Self", dietary_restrictions={"preferences": ["vegetarian"], "notes": "Loves spicy food"}))
+        db.add(Member(user_id=jaime.id, created_by_user_id=jaime.id, name="Nat Aker", relation="Spouse", dietary_restrictions={"allergies": ["dairy", "gluten"], "preferences": ["vegan options preferred"]}))
+        db.add(Member(user_id=jaime.id, created_by_user_id=jaime.id, name="Nolan Aker", relation="Son", dietary_restrictions={"allergies": ["peanuts", "eggs"], "notes": "Severe peanut allergy - EpiPen required"}))
+
+        # Gabe's Family
+        db.add(Member(user_id=gabe.id, created_by_user_id=gabe.id, name="Gabe Scott", relation="Self", dietary_restrictions={"preferences": ["rare steak", "bourbon"], "notes": "Carnivore"}))
+        db.add(Member(user_id=gabe.id, created_by_user_id=gabe.id, name="Palmer Scott", relation="Daughter", dietary_restrictions={"preferences": ["pasta", "chicken fingers"], "notes": "Age 8"}))
+        db.add(Member(user_id=gabe.id, created_by_user_id=gabe.id, name="Miller Scott", relation="Daughter", dietary_restrictions={"allergies": ["fish"], "preferences": ["pizza", "mac and cheese"], "notes": "Age 5"}))
         
         print(f"✅ Created {db.query(Member).count()} family members")
         
         # ============================================================
-        # DINING ROOMS
+        # 3. DINING ROOMS (ABEYTON FLOOR PLANS)
         # ============================================================
         print("\nCreating dining rooms...")
         
-        main_hall = DiningRoom(
-            name="Main Dining Hall",
-            is_active=True,
-            display_order=1,
-            meta={"description": "Primary dining space with chandelier"},
-            created_by_user_id=josh.id,
-            updated_by_user_id=josh.id
-        )
-        db.add(main_hall)
-        db.flush()
-        
-        private_room = DiningRoom(
-            name="Private Room",
-            is_active=True,
-            display_order=2,
-            meta={"description": "Intimate setting for special occasions"},
-            created_by_user_id=josh.id,
-            updated_by_user_id=josh.id
-        )
-        db.add(private_room)
-        db.flush()
-        
-        terrace = DiningRoom(
-            name="Terrace",
-            is_active=True,
-            display_order=3,
-            meta={"description": "Outdoor seating with garden views", "seasonal": "Spring-Fall only"},
-            created_by_user_id=josh.id,
-            updated_by_user_id=josh.id
-        )
-        db.add(terrace)
+        pool = DiningRoom(name="Pool", is_active=True, display_order=1, created_by_user_id=josh.id)
+        living_room = DiningRoom(name="Living Room", is_active=True, display_order=2, created_by_user_id=josh.id)
+        croquet = DiningRoom(name="Croquet Court", is_active=True, display_order=3, created_by_user_id=josh.id)
+        breakfast = DiningRoom(name="Breakfast Nook", is_active=True, display_order=4, created_by_user_id=josh.id)
+        card_room = DiningRoom(name="Card Room", is_active=True, display_order=5, created_by_user_id=josh.id)
+
+        db.add_all([pool, living_room, croquet, breakfast, card_room])
         db.flush()
         
         print(f"✅ Created {db.query(DiningRoom).count()} dining rooms")
         
         # ============================================================
-        # TABLES
+        # 4. TABLES (ABEYTON CONFIGURATION)
         # ============================================================
         print("\nCreating tables...")
         
+        # Format: (Room Object, Table Number, Seat Count, X, Y)
         tables_data = [
-            (main_hall.id, 1, 4, 50, 50),
-            (main_hall.id, 2, 4, 150, 50),
-            (main_hall.id, 3, 6, 250, 50),
-            (main_hall.id, 4, 6, 350, 50),
-            (main_hall.id, 5, 8, 50, 150),
-            (main_hall.id, 6, 8, 250, 150),
-            (main_hall.id, 7, 2, 450, 50),
-            (main_hall.id, 8, 2, 450, 100),
-            (private_room.id, 1, 10, 100, 100),
-            (private_room.id, 2, 6, 300, 100),
-            (terrace.id, 1, 4, 50, 50),
-            (terrace.id, 2, 4, 200, 50),
-            (terrace.id, 3, 4, 350, 50),
-            (terrace.id, 4, 2, 150, 150),
+            # --- POOL (Cabanas & Lounge) ---
+            (pool, 1, 6, 50, 50),   # Cabana 1
+            (pool, 2, 6, 200, 50),  # Cabana 2
+            (pool, 3, 4, 350, 50),  # Poolside Table
+            (pool, 4, 4, 50, 200),  # Poolside Table
+
+            # --- LIVING ROOM (Lounge Seating) ---
+            (living_room, 1, 8, 150, 150), # Central Sofa Area
+            (living_room, 2, 4, 50, 50),   # Corner Nook
+            (living_room, 3, 4, 300, 50),  # Window Side
+
+            # --- CROQUET COURT (Outdoor) ---
+            (croquet, 1, 6, 100, 100), # Courtside Table 1
+            (croquet, 2, 6, 250, 100), # Courtside Table 2
+
+            # --- BREAKFAST NOOK ---
+            (breakfast, 1, 6, 150, 150), # Main Round Table
+
+            # --- CARD ROOM (Gaming Tables) ---
+            (card_room, 1, 4, 100, 100), # Card Table 1
+            (card_room, 2, 4, 250, 100), # Card Table 2
+            (card_room, 3, 4, 100, 250), # Card Table 3
         ]
         
-        for room_id, table_num, seats, pos_x, pos_y in tables_data:
+        for room_obj, table_num, seats, pos_x, pos_y in tables_data:
             table = TableEntity(
-                dining_room_id=room_id,
+                dining_room_id=room_obj.id,
                 table_number=table_num,
                 seat_count=seats,
                 position_x=pos_x,
@@ -316,9 +147,21 @@ def seed_data():
         
         db.flush()
         print(f"✅ Created {db.query(TableEntity).count()} tables")
-        
+
         # ============================================================
-        # MENU ITEMS
+        # 5. GENERATE INDIVIDUAL SEATS
+        # ============================================================
+        print("\nGenerating individual seat records...")
+        all_tables = db.query(TableEntity).all()
+        seat_count = 0
+        for t in all_tables:
+            for i in range(1, t.seat_count + 1):
+                 db.add(Seat(table_id=t.id, seat_number=i, is_available=True, created_by_user_id=josh.id))
+                 seat_count += 1
+        print(f"✅ Created {seat_count} seats")
+
+        # ============================================================
+        # 6. MENU ITEMS
         # ============================================================
         print("\nCreating menu items...")
         
@@ -349,21 +192,9 @@ def seed_data():
         ]
         
         for name, desc, category, price, available, tags, order in menu_items:
-            item = MenuItem(
-                name=name,
-                description=desc,
-                category=category,
-                price=price,
-                is_available=available,
-                dietary_tags=tags if tags else None,
-                display_order=order,
-                created_by_user_id=josh.id,
-                updated_by_user_id=josh.id
-            )
-            db.add(item)
+            db.add(MenuItem(name=name, description=desc, category=category, price=price, is_available=available, dietary_tags=tags if tags else None, display_order=order, created_by_user_id=josh.id, updated_by_user_id=josh.id))
         
-        db.flush()
-        print(f"✅ Created {db.query(MenuItem).count()} menu items")
+        print(f"✅ Created {len(menu_items)} menu items")
         
         # ============================================================
         # COMMIT ALL
@@ -373,12 +204,6 @@ def seed_data():
         print("\n" + "="*60)
         print("✅ Database seeded successfully!")
         print("="*60)
-        print("\n📊 Summary:")
-        print(f"   Users: {db.query(User).count()}")
-        print(f"   Family Members: {db.query(Member).count()}")
-        print(f"   Dining Rooms: {db.query(DiningRoom).count()}")
-        print(f"   Tables: {db.query(TableEntity).count()}")
-        print(f"   Menu Items: {db.query(MenuItem).count()}")
         
     except Exception as e:
         print(f"\n❌ Error seeding database: {e}")
@@ -388,12 +213,12 @@ def seed_data():
         db.close()
 
 if __name__ == "__main__":
-    print("🗑️  WARNING: This will TRUNCATE (wipe) all existing data but keep table structure!")
+    print("🗑️  WARNING: This will delete ALL existing data!")
     response = input("Are you sure you want to continue? (yes/no): ")
     
     if response.lower() == 'yes':
-        # Removed drop_all/create_all to keep migrations happy
-        clear_data()
+        drop_all_tables()
+        create_all_tables()
         seed_data()
     else:
         print("❌ Aborted")

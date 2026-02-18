@@ -1,3 +1,4 @@
+# app/routes/dining_rooms.py
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 
@@ -8,6 +9,7 @@ from app.schemas.dining_room import DiningRoomResponse
 from app.schemas.table_entity import TableEntityResponse
 from app.models.user import User
 from app.utils.permissions import get_current_user, get_permission
+from app.utils.query_helpers import apply_permission_filter
 
 router = APIRouter()
 
@@ -35,3 +37,15 @@ def get_room(
     if not room:
         raise HTTPException(status_code=404, detail="Dining room not found")
     return room
+
+# ── NEW: Tables Endpoint (Member Accessible) ──
+@router.get("/{room_id}/tables", response_model=list[TableEntityResponse])
+def get_room_tables(
+    room_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    scope: str = Depends(get_permission("DiningRoom", "read")),
+):
+    """Fetch tables for a room. Accessible to anyone who can read rooms (Members)."""
+    tables = db.query(TableEntity).filter(TableEntity.dining_room_id == room_id).order_by(TableEntity.table_number).all()
+    return tables

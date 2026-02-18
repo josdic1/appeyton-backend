@@ -1,6 +1,7 @@
+# app/routes/reservations.py
 from datetime import datetime, timezone
 from time import time
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
@@ -21,6 +22,40 @@ from app.utils.toast_responses import (
 )
 
 router = APIRouter()
+
+# ── NEW: Availability Endpoint (Member Accessible) ──
+@router.get("/availability")
+def check_availability(
+    date: str = Query(..., description="YYYY-MM-DD"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """
+    Public availability check. Returns simplified booking data 
+    so the frontend can disable taken tables.
+    """
+    from datetime import date as date_cls
+    try:
+        target_date = date_cls.fromisoformat(date)
+    except ValueError:
+        raise HTTPException(400, "Invalid date format")
+
+    reservations = db.query(Reservation).filter(
+        Reservation.date == target_date,
+        Reservation.status != "cancelled"
+    ).all()
+
+    # Return minimal info needed for the table picker
+    return [
+        {
+            "table_id": r.table_id,
+            "meal_type": r.meal_type,
+            "status": r.status,
+            "start_time": r.start_time,
+            "end_time": r.end_time
+        }
+        for r in reservations
+    ]
 
 @router.post("", response_model=ToastResponse)
 def create_reservation(
@@ -44,8 +79,6 @@ def create_reservation(
         )
 
     # Check party size against member's guest allowance
-    # +1 because allowance covers guests only — the member themselves doesn't count against it
-    # Staff and admin are exempt — they book on behalf of others and aren't subject to member limits
     if payload.party_size and user.role == "member":
         max_allowed = user.guest_allowance + 1
         if payload.party_size > max_allowed:

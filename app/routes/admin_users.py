@@ -4,14 +4,50 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
 from app.models.activity_log import ActivityLog
-from app.schemas.user import UserResponse, UserUpdate
+from app.schemas.user import UserResponse, UserUpdate, UserCreate
 from app.utils.permissions import load_acl, save_acl, get_current_user, get_permission
 from datetime import datetime, timezone
 
 router = APIRouter()
 
+# ── NEW: Schema for Admin Creation (includes role/status) ──
+class UserCreateAdmin(UserCreate):
+    role: str = "member"
+    membership_status: str = "active"
+    guest_allowance: int = 4
 
 # ── User management ───────────────────────────────────────────────────
+
+# ── NEW: Create User Endpoint (Fixes 405 Error) ──
+@router.post("/users", response_model=UserResponse, status_code=201)
+def create_user(
+    user_in: UserCreateAdmin,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    scope: str = Depends(get_permission("User", "write")),
+):
+    """Admin create user with specific role and status."""
+    if scope != "all":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if db.query(User).filter(User.email == user_in.email).first():
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    new_user = User(
+        email=user_in.email,
+        name=user_in.name,
+        phone=user_in.phone,
+        role=user_in.role,
+        membership_status=user_in.membership_status,
+        guest_allowance=user_in.guest_allowance,
+        created_by_user_id=user.id
+    )
+    new_user.set_password(user_in.password)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
 @router.get("/users", response_model=list[UserResponse])
 def list_users(
     db: Session = Depends(get_db),
