@@ -2,40 +2,38 @@
 from __future__ import annotations
 from datetime import datetime, timezone, date
 from decimal import Decimal
-from typing import TYPE_CHECKING
-from sqlalchemy import String, ForeignKey, DateTime, Boolean, Date, Numeric
+from typing import TYPE_CHECKING, List, Dict, Any
+
+from sqlalchemy import String, ForeignKey, DateTime, Boolean, Date, Numeric, JSON, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 if TYPE_CHECKING:
     from app.models.fee import Fee
-
-try:
-    from sqlalchemy.dialects.postgresql import JSONB
-    JSONType = JSONB
-except Exception:
-    from sqlalchemy import JSON as JSONType
-
+    from app.models.user import User
 
 class Rule(Base):
     """Define pricing rules: cover charges, taxes, gratuity, fees"""
     __tablename__ = "rules"
+    __table_args__ = (
+        CheckConstraint(
+            "min_party_size <= max_party_size", 
+            name="ck_rule_party_size_range"
+        ),
+    )
     
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
-    rule_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
-    # rule_type: "cover_charge", "tax", "gratuity", "service_fee", "cancellation_fee"
     
+    # e.g., "cover_charge", "tax", "gratuity"
+    rule_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    
+    # e.g., "fixed", "percentage", "per_person"
     amount_type: Mapped[str] = mapped_column(String(20), nullable=False)
-    # amount_type: "fixed", "percentage", "per_person"
     
     amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    # If percentage: 18.5 = 18.5%
-    # If fixed: 50.00 = $50
-    # If per_person: 25.00 = $25 per person
     
     applies_to: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    # applies_to: "all", "dinner", "brunch", "private_room"
     
     min_party_size: Mapped[int | None] = mapped_column(nullable=True)
     max_party_size: Mapped[int | None] = mapped_column(nullable=True)
@@ -43,15 +41,20 @@ class Rule(Base):
     start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    is_taxable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+    is_taxable: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     
-    conditions: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
-    # conditions: {"day_of_week": ["friday", "saturday"], "meal_type": "dinner"}
+    # Standardized JSON
+    conditions: Mapped[Dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     
-    display_order: Mapped[int] = mapped_column(nullable=False, default=0)
+    display_order: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0")
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)
     
+    # Audit Trail
     created_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     updated_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     
@@ -68,11 +71,9 @@ class Rule(Base):
     )
     
     # Relationships
-    fees: Mapped[list["Fee"]] = relationship("Fee", back_populates="rule")
+    fees: Mapped[List["Fee"]] = relationship("Fee", back_populates="rule")
+    creator: Mapped["User | None"] = relationship("User", foreign_keys=[created_by_user_id])
+    updater: Mapped["User | None"] = relationship("User", foreign_keys=[updated_by_user_id])
 
-
-# Example Rules:
-# 1. Cover Charge: type="cover_charge", amount_type="per_person", amount=25.00
-# 2. Tax: type="tax", amount_type="percentage", amount=8.5, applies_to="all"
-# 3. Gratuity: type="gratuity", amount_type="percentage", amount=20.0, min_party_size=6
-# 4. Service Fee: type="service_fee", amount_type="fixed", amount=50.00, applies_to="private_room"
+    def __repr__(self) -> str:
+        return f"<Rule(name='{self.name}', type='{self.rule_type}', amount={self.amount})>"

@@ -1,29 +1,35 @@
+# app/schemas/member.py
 from __future__ import annotations
 from datetime import datetime
-from typing import Any
+from typing import Any, Dict
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
-class MemberCreate(BaseModel):
-    name: str
-    relation: str | None = None
-    dietary_restrictions: dict[str, Any] | None = None
-    meta: dict[str, Any] | None = None
+class MemberBase(BaseModel):
+    """Shared fields for Member schemas"""
+    name: str = Field(..., min_length=1, max_length=120)
+    relation: str | None = Field(None, max_length=60)
+    dietary_restrictions: Dict[str, Any] | None = None
+    meta: Dict[str, Any] | None = None
+
+class MemberCreate(MemberBase):
+    """Schema for creating a new member. 
+    user_id is often provided via URL path, but included here for flexibility.
+    """
+    user_id: int | None = None
 
 class MemberUpdate(BaseModel):
-    name: str | None = None
-    relation: str | None = None
-    dietary_restrictions: dict[str, Any] | None = None
-    meta: dict[str, Any] | None = None
+    """All fields optional for PATCH requests"""
+    name: str | None = Field(None, min_length=1, max_length=120)
+    relation: str | None = Field(None, max_length=60)
+    dietary_restrictions: Dict[str, Any] | None = None
+    meta: Dict[str, Any] | None = None
 
-class MemberResponse(BaseModel):
+class MemberResponse(MemberBase):
+    """Full member data for API responses"""
     id: int
     user_id: int
-    created_by_user_id: int | None
-    name: str
-    relation: str | None
-    dietary_restrictions: dict[str, Any] | None
-    meta: dict[str, Any] | None
+    created_by_user_id: int | None = None
     created_at: datetime
     updated_at: datetime
 

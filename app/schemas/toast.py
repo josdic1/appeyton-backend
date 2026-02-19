@@ -1,31 +1,33 @@
 # app/schemas/toast.py
-from pydantic import BaseModel
-from typing import Optional, List, Literal
+from __future__ import annotations
+from typing import Optional, List, Literal, Dict, Any
+from pydantic import BaseModel, ConfigDict, Field
 
 class ActionButton(BaseModel):
-    label: str  # Keep under 20 chars for UI
+    # Enforces the UI rule mentioned in your comment
+    label: str = Field(..., max_length=20)  
     action: Literal["retry", "navigate", "dismiss", "reload", "calendar", "download"]
-    params: Optional[dict] = None
+    params: Optional[Dict[str, Any]] = None
 
 class ToastResponse(BaseModel):
     status: Literal["loading", "success", "error", "warning"]
     
-    # The 5W1H (aim for 8 words each, max 12)
-    what: str       
-    who: str        
-    when: str       
-    why: str        
-    where: str      
-    how: str        
+    # The 5W1H (Brief, informative headers)
+    what: str = Field(..., max_length=100)
+    who: str = Field(..., max_length=100)
+    when: str = Field(..., max_length=100)
+    why: str = Field(..., max_length=100)
+    where: str = Field(..., max_length=100)
+    how: str = Field(..., max_length=100)
     
     # User actions
-    actions: List[ActionButton] = []
+    actions: List[ActionButton] = Field(default_factory=list)
     
-    # Nerd stats
-    meta: Optional[dict] = None
+    # Audit/Nerd stats
+    meta: Optional[Dict[str, Any]] = None
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "status": "success",
                 "what": "Table 5 booked for 4 people",
@@ -35,9 +37,10 @@ class ToastResponse(BaseModel):
                 "where": "Oak Room, prime dinner hour",
                 "how": "Confirmation email sent, add to calendar",
                 "actions": [
-                    {"label": "Add to Calendar", "action": "calendar", "params": {"reservation_id": 123}},
-                    {"label": "View Details", "action": "navigate", "params": {"view": "/reservations/123"}}
+                    {"label": "Add to Calendar", "action": "calendar", "params": {"id": 123}},
+                    {"label": "View Details", "action": "navigate", "params": {"path": "/res/123"}}
                 ],
-                "meta": {"response_time_ms": 47, "reservation_id": 123}
+                "meta": {"response_time_ms": 47}
             }
         }
+    )

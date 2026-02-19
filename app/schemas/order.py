@@ -1,27 +1,21 @@
 # app/schemas/order.py
 from __future__ import annotations
-
 from datetime import datetime
 from decimal import Decimal
-from typing import Any
+from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict
-
+from pydantic import BaseModel, ConfigDict, Field
 
 class OrderItemCreate(BaseModel):
-    """Create an OrderItem directly (used by /api/order-items)."""
-
-    order_id: int
     menu_item_id: int
     reservation_attendee_id: int
-    quantity: int = 1
-    special_instructions: str | None = None
-
+    quantity: int = Field(default=1, ge=1)
+    special_instructions: Optional[str] = None
 
 class OrderItemUpdate(BaseModel):
-    quantity: int | None = None
-    special_instructions: str | None = None
-
+    # Allows changing quantity or instructions after the order is in
+    quantity: Optional[int] = Field(None, ge=1)
+    special_instructions: Optional[str] = None
 
 class OrderItemResponse(BaseModel):
     id: int
@@ -30,56 +24,38 @@ class OrderItemResponse(BaseModel):
     menu_item_id: int
     quantity: int
     unit_price: Decimal
-    special_instructions: str | None
-    meta: dict[str, Any] | None
+    special_instructions: Optional[str] = None
+    
+    # These map to the hybrid_properties in the OrderItem model
+    menu_item_name: Optional[str] = None
+    attendee_name: Optional[str] = None
+    
     created_at: datetime
     updated_at: datetime
 
-    # Added for frontend rendering convenience and to prevent response_model filtering.
-    menu_item_name: str | None = None
-    attendee_name: str | None = None
-
     model_config = ConfigDict(from_attributes=True)
-
-
-class OrderItemInCreate(BaseModel):
-    """For creating items when creating an order."""
-
-    menu_item_id: int
-    reservation_attendee_id: int
-    quantity: int = 1
-    special_instructions: str | None = None
-
 
 class OrderCreate(BaseModel):
     reservation_id: int
-    items: list[OrderItemInCreate]
-    notes: str | None = None
-
+    items: List[OrderItemCreate]
+    notes: Optional[str] = None
 
 class OrderUpdate(BaseModel):
-    status: str | None = None
-    notes: str | None = None
-
+    """Schema to handle order status changes and notes updates"""
+    status: Optional[str] = None
+    notes: Optional[str] = None
 
 class OrderResponse(BaseModel):
     id: int
     reservation_id: int
     status: str
-    notes: str | None
+    notes: Optional[str] = None
+    total_price: Decimal # Populated by model hybrid_property
     created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
-
-class OrderWithItemsResponse(BaseModel):
-    id: int
-    reservation_id: int
-    status: str
-    notes: str | None
-    items: list[OrderItemResponse]
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
+class OrderWithItemsResponse(OrderResponse):
+    """Full detail response including all individual line items"""
+    items: List[OrderItemResponse]

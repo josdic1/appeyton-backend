@@ -1,40 +1,57 @@
 # app/schemas/reservation_attendee.py
 from __future__ import annotations
+
 from datetime import datetime
 from typing import Any, Optional, List, Dict
-from pydantic import BaseModel, ConfigDict, field_validator
+
+from pydantic import BaseModel, ConfigDict, model_validator, Field
+
 
 class ReservationAttendeeCreate(BaseModel):
     """
     Used for both initial POST and the Sync PATCH.
-    The optional ID allows the backend to update existing rows instead of duplicating them.
+    Optional ID allows upserting instead of duplicating.
     """
-    id: Optional[int] = None 
+    id: Optional[int] = None
     reservation_id: Optional[int] = None
+
     member_id: Optional[int] = None
     seat_id: Optional[int] = None
-    name: str 
-    attendee_type: str # 'self', 'spouse', 'child', 'guest'
+
+    # Optional because member-attendees can be created with member_id only
+    name: Optional[str] = Field(None, max_length=120)
+
+    # Optional because backend should normalize this ("member" vs "guest")
+    attendee_type: Optional[str] = Field(None, max_length=20)
+
     dietary_restrictions: Optional[Dict[str, Any]] = None
     meta: Optional[Dict[str, Any]] = None
 
-    @field_validator('name')
-    @classmethod
-    def validate_name(cls, v):
-        if not v or len(v.strip()) == 0:
-            raise ValueError('Guest name cannot be empty')
-        return v.strip()
+    @model_validator(mode="after")
+    def validate_member_or_guest(self) -> "ReservationAttendeeCreate":
+        # Member attendee: allow missing name/type (backend will fill)
+        if self.member_id is not None:
+            if self.name is not None and len(self.name.strip()) == 0:
+                self.name = None
+            return self
+
+        # Guest attendee: require a non-empty name
+        if self.name is None or len(self.name.strip()) == 0:
+            raise ValueError("Guest attendee requires a non-empty name")
+
+        self.name = self.name.strip()
+        return self
+
 
 class ReservationAttendeeUpdate(BaseModel):
-    """Used for individual guest PATCH requests"""
-    name: Optional[str] = None
+    name: Optional[str] = Field(None, max_length=120)
     seat_id: Optional[int] = None
-    attendee_type: Optional[str] = None
+    attendee_type: Optional[str] = Field(None, max_length=20)
     dietary_restrictions: Optional[Dict[str, Any]] = None
     meta: Optional[Dict[str, Any]] = None
 
+
 class ReservationAttendeeResponse(BaseModel):
-    """The shape sent to React for Visit Management and Manifests"""
     id: int
     reservation_id: int
     member_id: Optional[int] = None
@@ -49,6 +66,7 @@ class ReservationAttendeeResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class ReservationAttendeeSyncList(BaseModel):
-    """Wrapper for the batch reconciliation payload"""
+    """Used for bulk updating the guest list of a reservation"""
     attendees: List[ReservationAttendeeCreate]

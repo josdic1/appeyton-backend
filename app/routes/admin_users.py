@@ -1,16 +1,19 @@
 # app/routes/admin_users.py
-from fastapi import APIRouter, Depends, HTTPException, Body, Request, Query
+from datetime import datetime, timezone
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException, Body, Request, Query, status
 from sqlalchemy.orm import Session
+
 from app.database import get_db
 from app.models.user import User
 from app.models.activity_log import ActivityLog
-from app.schemas.user import UserResponse, UserUpdate, UserCreate
+from app.schemas.user import UserResponse, UserUpdate, UserCreate, UserAdminUpdate
 from app.utils.permissions import load_acl, save_acl, get_current_user, get_permission
-from datetime import datetime, timezone
 
-router = APIRouter()
+router = APIRouter(tags=["Admin - Users"])
 
-# ── NEW: Schema for Admin Creation (includes role/status) ──
+# ── Admin-Specific Schemas ──────────────────────────────────────────
 class UserCreateAdmin(UserCreate):
     role: str = "member"
     membership_status: str = "active"
@@ -18,8 +21,7 @@ class UserCreateAdmin(UserCreate):
 
 # ── User management ───────────────────────────────────────────────────
 
-# ── NEW: Create User Endpoint (Fixes 405 Error) ──
-@router.post("/users", response_model=UserResponse, status_code=201)
+@router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(
     user_in: UserCreateAdmin,
     db: Session = Depends(get_db),
@@ -28,81 +30,60 @@ def create_user(
 ):
     """Admin create user with specific role and status."""
     if scope != "all":
-        raise HTTPException(status_code=403, detail="Admin access required")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     
     if db.query(User).filter(User.email == user_in.email).first():
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
     
     new_user = User(
-        email=user_in.email,
-        name=user_in.name,
-        phone=user_in.phone,
-        role=user_in.role,
-        membership_status=user_in.membership_status,
-        guest_allowance=user_in.guest_allowance,
+        **user_in.model_dump(exclude={"password"}),
         created_by_user_id=user.id
     )
     new_user.set_password(user_in.password)
+    
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     return new_user
 
-@router.get("/users", response_model=list[UserResponse])
+@router.get("/users", response_model=List[UserResponse])
 def list_users(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
     scope: str = Depends(get_permission("User", "read")),
 ):
     """Admin view of all users."""
     if scope != "all":
-        raise HTTPException(status_code=403, detail="Admin access required")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return db.query(User).order_by(User.created_at.desc()).all()
-
-
-@router.get("/users/{user_id}", response_model=UserResponse)
-def get_user(
-    user_id: int,
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-    scope: str = Depends(get_permission("User", "read")),
-):
-    """Admin fetch of any user by ID."""
-    if scope != "all":
-        raise HTTPException(status_code=403, detail="Admin access required")
-    target = db.query(User).filter(User.id == user_id).first()
-    if not target:
-        raise HTTPException(status_code=404, detail="User not found")
-    return target
 
 
 @router.patch("/users/{user_id}", response_model=UserResponse)
 def update_user(
     user_id: int,
-    user_in: UserUpdate,
+    user_in: UserAdminUpdate, 
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
     scope: str = Depends(get_permission("User", "write")),
 ):
     """Admin update of any user's fields including role and status."""
     if scope != "all":
-        raise HTTPException(status_code=403, detail="Admin access required")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    
     target = db.query(User).filter(User.id == user_id).first()
     if not target:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    
     for field, val in user_in.model_dump(exclude_unset=True).items():
         if field == "password":
-            if val:
-                target.set_password(val)
+            target.set_password(val)
         else:
             setattr(target, field, val)
-    target.updated_at = datetime.now(timezone.utc)
+            
     db.commit()
     db.refresh(target)
     return target
 
 
-@router.delete("/users/{user_id}", status_code=204)
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
     user_id: int,
     db: Session = Depends(get_db),
@@ -111,12 +92,14 @@ def delete_user(
 ):
     """Admin delete of a user. Cannot delete yourself."""
     if scope != "all":
-        raise HTTPException(status_code=403, detail="Admin access required")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     if user_id == user.id:
-        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete your own account")
+    
     target = db.query(User).filter(User.id == user_id).first()
     if not target:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    
     db.delete(target)
     db.commit()
 
@@ -127,18 +110,20 @@ def set_user_role(
     user_id: int,
     role: str = Query(..., description="member | staff | admin"),
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
     scope: str = Depends(get_permission("User", "write")),
 ):
     if scope != "all":
-        raise HTTPException(status_code=403, detail="Only admins can modify roles")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can modify roles")
+    
     target_user = db.query(User).filter(User.id == user_id).first()
     if not target_user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    
     if target_user.role == "admin" and role != "admin":
         admin_count = db.query(User).filter(User.role == "admin").count()
         if admin_count <= 1:
-            raise HTTPException(status_code=400, detail="Cannot demote last admin")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot demote last admin")
+    
     target_user.role = role
     db.commit()
     return {"ok": True, "new_role": role}
@@ -152,29 +137,27 @@ def get_live_matrix(
     scope: str = Depends(get_permission("User", "read")),
 ):
     if user.role != "admin" or scope != "all":
-        raise HTTPException(status_code=403, detail="Admin access required")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return load_acl(db)
 
 
 @router.get("/activity-logs")
 def get_activity_logs(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
     scope: str = Depends(get_permission("User", "read")),
 ):
     if scope != "all":
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
     return db.query(ActivityLog).order_by(ActivityLog.created_at.desc()).limit(50).all()
 
 
 @router.get("/permissions/history")
 def get_permissions_history(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
     scope: str = Depends(get_permission("User", "read")),
 ):
     if scope != "all":
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
     return (
         db.query(ActivityLog)
         .filter(ActivityLog.action == "update_permissions")
@@ -193,7 +176,7 @@ def update_matrix(
     scope: str = Depends(get_permission("User", "write")),
 ):
     if user.role != "admin" or scope != "all":
-        raise HTTPException(status_code=403, detail="Unauthorized")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized")
     save_acl(
         db=db,
         user_id=user.id,

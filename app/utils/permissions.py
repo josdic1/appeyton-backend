@@ -1,18 +1,20 @@
 # app/utils/permissions.py
-import json
-import os
+from __future__ import annotations
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException, status
+from typing import Dict, Any, Literal
+
 from app.models.user import User
 from app.models.system_setting import SystemSetting
 from app.models.activity_log import ActivityLog
 from app.utils.auth import get_current_user
 from app.database import get_db
 
-# The key we use in system_settings table
 ACL_KEY = "permissions_matrix"
 
-# Fallback default — used only if no row exists in DB yet
+# Initialize with the default so it is NEVER None
+_ACL_CACHE: Dict[str, Any] = {}
+
 DEFAULT_ACL = {
     "member": {
         "Reservation": {"read": "own", "write": "own", "delete": "own"},
@@ -61,16 +63,25 @@ DEFAULT_ACL = {
     },
 }
 
+def load_acl(db: Session, force_refresh: bool = False) -> Dict[str, Any]:
+    """Retrieves the ACL. Logic ensures a Dict is always returned."""
+    global _ACL_CACHE
+    
+    # If cache is populated and we aren't forcing, return it
+    if _ACL_CACHE and not force_refresh:
+        return _ACL_CACHE
 
-def load_acl(db: Session) -> dict:
     setting = db.query(SystemSetting).filter(SystemSetting.key == ACL_KEY).first()
-    if setting and setting.value:
-        return setting.value
-    return DEFAULT_ACL
+    
+    # Prove to Pylance that result is a Dict
+    result: Dict[str, Any] = DEFAULT_ACL
+    if setting and isinstance(setting.value, dict):
+        result = setting.value
+        
+    _ACL_CACHE = result
+    return result
 
-
-def save_acl(db: Session, user_id: int, new_acl: dict, ip: str | None = None) -> None:
-    # Capture old value before overwriting
+def save_acl(db: Session, user_id: int, new_acl: Dict[str, Any], ip: str | None = None) -> None:
     setting = db.query(SystemSetting).filter(SystemSetting.key == ACL_KEY).first()
     old_acl = setting.value if setting else None
 
@@ -80,7 +91,7 @@ def save_acl(db: Session, user_id: int, new_acl: dict, ip: str | None = None) ->
 
     setting.value = new_acl
     setting.updated_by_user_id = user_id
-    db.flush()  # write the setting before logging
+    db.flush() 
 
     log = ActivityLog(
         user_id=user_id,
@@ -95,31 +106,29 @@ def save_acl(db: Session, user_id: int, new_acl: dict, ip: str | None = None) ->
     )
     db.add(log)
     db.commit()
-
+    
+    # Invalidate cache
+    load_acl(db, force_refresh=True)
 
 def get_permission(entity: str, action: str):
-    """FastAPI dependency — checks the ACL and returns the scope.
-
-    Returns: 'all' | 'own'
-    Raises:  403 if scope is 'none'
-    """
     def dependency(
         user: User = Depends(get_current_user),
         db: Session = Depends(get_db),
-    ):
+    ) -> Literal["all", "own"]:
         if user.role == "admin":
             return "all"
 
         acl = load_acl(db)
-        role_policy: dict = acl.get(user.role) or {}
-        entity_policy: dict = role_policy.get(entity) or {}
+        role_policy: Dict[str, Any] = acl.get(user.role, {})
+        entity_policy: Dict[str, Any] = role_policy.get(entity, {})
         scope = entity_policy.get(action, "none")
 
         if scope == "none":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access Denied: {entity}:{action}",
+                detail=f"Insufficient permissions for {entity}:{action}",
             )
-        return scope
+        
+        return scope # type: ignore
 
     return dependency

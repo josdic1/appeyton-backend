@@ -1,4 +1,6 @@
 # app/utils/notifications.py
+from __future__ import annotations
+from typing import Any, Dict
 from sqlalchemy.orm import Session
 from app.models.notification import Notification
 from app.models.user import User
@@ -10,46 +12,55 @@ def create_notification(
     subject: str = "New Alert",
     type: str = "general",
     priority: str = "normal",
-    # FIX: Changed types to allow None (str | None)
+    channel: str = "in_app",
     resource_type: str | None = None,
-    resource_id: int | None = None
+    resource_id: int | None = None,
+    meta: Dict[str, Any] | None = None
 ):
     """
-    Creates a notification in the database.
-    In a real app, this would also trigger Email/SMS/Push via background tasks.
+    Creates a notification in the database context.
+    Uses db.flush() instead of commit() to allow the caller to manage the transaction.
     """
     notif = Notification(
         user_id=user_id,
         notification_type=type,
-        channel="in_app",
+        channel=channel,
         priority=priority,
         subject=subject,
         message=message,
         resource_type=resource_type,
         resource_id=resource_id,
-        status="sent"
+        status="sent" if channel == "in_app" else "queued",
+        meta=meta
     )
     db.add(notif)
-    db.commit()
-    db.refresh(notif)
+    db.flush() # Ensure ID is generated without closing transaction
     return notif
 
 def notify_staff(
     db: Session, 
     message: str, 
-    # FIX: Changed types to allow None
     resource_type: str | None = None, 
-    resource_id: int | None = None
+    resource_id: int | None = None,
+    subject: str = "Staff Alert"
 ):
-    """Send a notification to all staff and admins."""
+    """
+    Sends a notification to all staff and admins.
+    Note: For very large staff lists, consider move this to a background task.
+    """
     staff_members = db.query(User).filter(User.role.in_(["staff", "admin"])).all()
+    
+    notifications = []
     for staff in staff_members:
-        create_notification(
+        n = create_notification(
             db, 
             user_id=staff.id, 
             message=message, 
-            subject="Staff Alert",
+            subject=subject,
             priority="high",
             resource_type=resource_type,
             resource_id=resource_id
         )
+        notifications.append(n)
+    
+    return notifications

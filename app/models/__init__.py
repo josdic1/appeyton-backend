@@ -1,26 +1,29 @@
 # app/models/__init__.py
 
-from app.models.user import User
-from app.models.member import Member
-from app.models.dining_room import DiningRoom
-from app.models.table_entity import TableEntity
-from app.models.reservation import Reservation
-from app.models.reservation_attendee import ReservationAttendee
-from app.models.menu_item import MenuItem
-from app.models.order import Order
-from app.models.order_item import OrderItem
-from app.models.activity_log import ActivityLog
-from app.models.audit_trail import AuditTrail
-from app.models.rule import Rule
-from app.models.fee import Fee
-from app.models.reservation_total import ReservationTotal
-from app.models.reservation_message import ReservationMessage
-from app.models.notification import Notification
-from app.models.daily_stat import DailyStat
-from app.models.seat import Seat
-from app.models.system_setting import SystemSetting  # ADD
+from app.database import Base 
+
+from .user import User
+from .member import Member
+from .dining_room import DiningRoom
+from .table_entity import TableEntity  # Updated based on your error
+from .reservation import Reservation
+from .reservation_attendee import ReservationAttendee
+from .menu_item import MenuItem
+from .order import Order
+from .order_item import OrderItem
+from .activity_log import ActivityLog
+from .audit_trail import AuditTrail
+from .rule import Rule
+from .fee import Fee
+from .reservation_total import ReservationTotal
+from .reservation_message import ReservationMessage
+from .notification import Notification
+from .daily_stat import DailyStat
+from .seat import Seat
+from .system_setting import SystemSetting
 
 __all__ = [
+    "Base",
     "User",
     "Member",
     "DiningRoom",
@@ -39,5 +42,5 @@ __all__ = [
     "Notification",
     "DailyStat",
     "Seat",
-    "SystemSetting",  # ADD
+    "SystemSetting",
 ]

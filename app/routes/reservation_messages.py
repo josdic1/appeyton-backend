@@ -1,34 +1,53 @@
 # app/routes/reservation_messages.py
-from fastapi import APIRouter, Depends, HTTPException
+from __future__ import annotations
+from typing import List
+
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session, joinedload
+
 from app.database import get_db
-# CRITICAL: Import the CLASS, not just the module
-from app.models.reservation_message import ReservationMessage as RMClass
 from app.models.reservation import Reservation
+from app.models.reservation_message import ReservationMessage
 from app.models.user import User
-from app.schemas.reservation_message import ReservationMessageCreate, ReservationMessageResponse
-from app.utils.permissions import get_current_user
+from app.schemas.reservation_message import (
+    ReservationMessageCreate,
+    ReservationMessageResponse,
+)
+from app.utils.auth import get_current_user
+from app.utils import toast_responses
 
-router = APIRouter()
+# main.py mounts this router at /api/reservation-messages
+# so DO NOT add prefix="/reservation-messages" here.
+router = APIRouter(tags=["Messages"])
 
-@router.get("/{reservation_id}", response_model=list[ReservationMessageResponse])
+
+@router.get("/{reservation_id}", response_model=List[ReservationMessageResponse])
 def get_reservation_chat(
     reservation_id: int,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    """Fetch message history for a reservation. Members cannot see internal notes."""
     res = db.query(Reservation).filter(Reservation.id == reservation_id).first()
     if not res:
-        raise HTTPException(status_code=404, detail="Reservation not found")
+        return toast_responses.error_not_found("Reservation", reservation_id)
 
-    query = db.query(RMClass).options(joinedload(RMClass.sender)).filter(
-        RMClass.reservation_id == reservation_id
+    # Basic ownership check
+    if user.role == "member" and res.user_id != user.id:
+        return toast_responses.error_forbidden("Chat", "read")
+
+    query = (
+        db.query(ReservationMessage)
+        .options(joinedload(ReservationMessage.sender))
+        .filter(ReservationMessage.reservation_id == reservation_id)
     )
 
+    # Privacy filter: hide staff notes from members
     if user.role == "member":
-        query = query.filter(RMClass.is_internal == False)
+        query = query.filter(ReservationMessage.is_internal == False)
 
-    return query.order_by(RMClass.created_at.asc()).all()
+    return query.order_by(ReservationMessage.created_at.asc()).all()
+
 
 @router.post("/{reservation_id}", response_model=ReservationMessageResponse)
 def send_reservation_message(
@@ -37,19 +56,30 @@ def send_reservation_message(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    """Send a new message. Staff can mark messages as internal."""
     res = db.query(Reservation).filter(Reservation.id == reservation_id).first()
     if not res:
-        raise HTTPException(status_code=404, detail="Reservation not found")
+        return toast_responses.error_not_found("Reservation", reservation_id)
 
-    # Use the RMClass directly to avoid 'Module not callable'
-    message = RMClass(
+    # Ownership check
+    if user.role == "member" and res.user_id != user.id:
+        return toast_responses.error_forbidden("Chat", "send_message")
+
+    # Members can NEVER send internal messages
+    is_internal = payload.is_internal if user.role != "member" else False
+
+    message = ReservationMessage(
         reservation_id=reservation_id,
         sender_user_id=user.id,
         message=payload.message,
-        is_internal=payload.is_internal if user.role != "member" else False,
+        is_internal=is_internal,
     )
 
-    db.add(message)
-    db.commit()
-    db.refresh(message)
-    return message
+    try:
+        db.add(message)
+        db.commit()
+        db.refresh(message)
+        return message
+    except Exception as e:
+        db.rollback()
+        return toast_responses.error_server(f"Failed to send message: {str(e)}")

@@ -1,5 +1,8 @@
 # app/routes/members.py
-from fastapi import APIRouter, Depends, HTTPException, status
+from __future__ import annotations
+from typing import List
+
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -8,8 +11,9 @@ from app.models.member import Member
 from app.models.user import User
 from app.schemas.member import MemberCreate, MemberUpdate, MemberResponse
 from app.utils.auth import get_current_user
+from app.utils import toast_responses
 
-router = APIRouter()
+router = APIRouter(tags=["members"])
 
 
 @router.post("", response_model=MemberResponse, status_code=status.HTTP_201_CREATED)
@@ -18,27 +22,29 @@ def create_member(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    # Check if "self" already exists
+    """Adds a new family member or guest profile."""
+    
     if payload.relation and payload.relation.lower() == "self":
         existing_self = db.query(Member).filter(
             Member.user_id == user.id,
             Member.relation.ilike("self")
         ).first()
         if existing_self:
-            raise HTTPException(
-                status_code=400,
-                detail="You already have a 'self' family member. Only one allowed."
+            return toast_responses.error_validation(
+                field="relation",
+                issue="A 'self' profile already exists.",
+                suggestion="Update your existing profile instead."
             )
     
-    # Check duplicate name
     existing_name = db.query(Member).filter(
         Member.user_id == user.id,
         Member.name == payload.name
     ).first()
     if existing_name:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Family member named '{payload.name}' already exists"
+        return toast_responses.error_validation(
+            field="name",
+            issue=f"Member '{payload.name}' already exists.",
+            suggestion="Use a nickname or unique identifier."
         )
     
     m = Member(
@@ -57,10 +63,10 @@ def create_member(
         return m
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Member already exists")
+        return toast_responses.error_server("Database integrity conflict.")
 
 
-@router.get("", response_model=list[MemberResponse])
+@router.get("", response_model=List[MemberResponse])
 def list_members(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -76,7 +82,7 @@ def get_member(
 ):
     m = db.query(Member).filter(Member.id == member_id, Member.user_id == user.id).first()
     if not m:
-        raise HTTPException(status_code=404, detail="Member not found")
+        return toast_responses.error_not_found("Member", member_id)
     return m
 
 
@@ -89,9 +95,8 @@ def update_member(
 ):
     m = db.query(Member).filter(Member.id == member_id, Member.user_id == user.id).first()
     if not m:
-        raise HTTPException(status_code=404, detail="Member not found")
+        return toast_responses.error_not_found("Member", member_id)
 
-    # If changing relation to "self", check no other self exists
     if payload.relation and payload.relation.lower() == "self":
         existing_self = db.query(Member).filter(
             Member.user_id == user.id,
@@ -99,12 +104,8 @@ def update_member(
             Member.id != member_id
         ).first()
         if existing_self:
-            raise HTTPException(
-                status_code=400,
-                detail="You already have a 'self' family member"
-            )
+            return toast_responses.error_validation("relation", "Another profile is already 'self'.", "Change the relation.")
     
-    # If changing name, check duplicate
     if payload.name and payload.name != m.name:
         existing_name = db.query(Member).filter(
             Member.user_id == user.id,
@@ -112,10 +113,7 @@ def update_member(
             Member.id != member_id
         ).first()
         if existing_name:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Family member named '{payload.name}' already exists"
-            )
+            return toast_responses.error_validation("name", "Name conflict.", "Provide a unique name.")
 
     for k, v in payload.model_dump(exclude_unset=True).items():
         setattr(m, k, v)
@@ -133,7 +131,8 @@ def delete_member(
 ):
     m = db.query(Member).filter(Member.id == member_id, Member.user_id == user.id).first()
     if not m:
-        raise HTTPException(status_code=404, detail="Member not found")
+        return toast_responses.error_not_found("Member", member_id)
+        
     db.delete(m)
     db.commit()
     return None

@@ -1,10 +1,11 @@
 # app/models/reservation.py
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 from datetime import datetime, timezone, date as date_type, time as time_type
 from decimal import Decimal
 
-from sqlalchemy import Integer, String, ForeignKey, DateTime, Date, Time, Text, Index
+from sqlalchemy import String, ForeignKey, DateTime, Date, Time, Text, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -17,19 +18,10 @@ if TYPE_CHECKING:
     from app.models.order import Order
     from app.models.dining_room import DiningRoom
     from app.models.table_entity import TableEntity
-
-try:
-    from sqlalchemy.dialects.postgresql import JSONB
-    JSONType = JSONB
-except Exception:
-    from sqlalchemy import JSON as JSONType
-
+    from app.models.user import User
 
 class Reservation(Base):
     __tablename__ = "reservations"
-    __table_args__ = (
-        Index("ix_reservations_date_meal_table", "date", "meal_type", "table_id", unique=True),
-    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
@@ -42,21 +34,30 @@ class Reservation(Base):
     start_time: Mapped[time_type] = mapped_column(Time, nullable=False)
     end_time: Mapped[time_type] = mapped_column(Time, nullable=False)
 
-    status: Mapped[str] = mapped_column(String(30), default="pending", nullable=False, index=True)
-    
-    # ── THE KITCHEN TRACKER (FIXES 500 ERROR) ──
-    fired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        index=True,
+        default="pending",
+        server_default="pending",
+    )
 
+    fired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    meta: Mapped[dict | None] = mapped_column("metadata", JSONType, nullable=True)
- 
+    
+    # Changed to 'extra_data' to avoid SQLAlchemy Base.metadata collision
+    meta: Mapped[dict | None] = mapped_column("extra_data", JSON, nullable=True)
+
     created_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     cancelled_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -65,51 +66,49 @@ class Reservation(Base):
         nullable=False,
     )
 
-    # ── RELATIONSHIPS ──
+    # Relationships
+    # Added explicit foreign_keys where multiple columns point to the same table
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
     dining_room: Mapped["DiningRoom"] = relationship("DiningRoom")
     table: Mapped["TableEntity"] = relationship("TableEntity")
+    
     order: Mapped["Order"] = relationship("Order", back_populates="reservation", uselist=False)
 
     attendees: Mapped[list["ReservationAttendee"]] = relationship(
         "ReservationAttendee",
         back_populates="reservation",
         cascade="all, delete-orphan",
-        lazy="selectin"
+        lazy="selectin",
     )
 
     fees: Mapped[list["Fee"]] = relationship(
         "Fee",
         back_populates="reservation",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
 
     totals: Mapped["ReservationTotal | None"] = relationship(
         "ReservationTotal",
         back_populates="reservation",
         uselist=False,
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
 
     messages: Mapped[list["ReservationMessage"]] = relationship(
         "ReservationMessage",
         back_populates="reservation",
         cascade="all, delete-orphan",
-        order_by="ReservationMessage.created_at"
+        order_by="ReservationMessage.created_at",
     )
 
-    # ── COMPUTED PROPERTIES ──
     @property
     def party_size(self) -> int:
         return len(self.attendees)
 
     @property
     def total_amount(self) -> Decimal:
-        if self.totals:
-            return self.totals.total_amount
-        return Decimal("0.00")
+        return self.totals.total_amount if self.totals else Decimal("0.00")
 
     @property
     def payment_status(self) -> str:
-        if self.totals:
-            return self.totals.payment_status
-        return "unpaid"
+        return self.totals.payment_status if self.totals else "unpaid"

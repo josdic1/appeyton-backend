@@ -1,11 +1,12 @@
 # app/schemas/seat.py
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 from typing import Any, Optional
 
 class SeatBase(BaseModel):
-    seat_number: int
-    position: Optional[str] = None
+    # Ensure seat numbers are physically realistic
+    seat_number: int = Field(..., ge=1)
+    position: Optional[str] = Field(None, max_length=50) # e.g., "Wall", "Aisle"
     is_accessible: bool = False
     is_available: bool = True
     preferences: Optional[dict[str, Any]] = None
@@ -18,12 +19,14 @@ class SeatCreate(SeatBase):
 
 class SeatUpdate(BaseModel):
     """Schema for updating an existing seat (all fields optional)"""
-    seat_number: Optional[int] = None
-    position: Optional[str] = None
+    seat_number: Optional[int] = Field(None, ge=1)
+    position: Optional[str] = Field(None, max_length=50)
     is_accessible: Optional[bool] = None
     is_available: Optional[bool] = None
     preferences: Optional[dict[str, Any]] = None
     notes: Optional[str] = None
+    # table_id is optional here; moving a seat to a different table is possible 
+    # but usually requires updating the seat_number to avoid unique constraint violations.
     table_id: Optional[int] = None
 
 class SeatResponse(SeatBase):

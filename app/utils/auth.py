@@ -1,6 +1,7 @@
 # app/utils/auth.py
 import jwt
 from datetime import datetime, timedelta, timezone
+from typing import Dict, Any
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -14,49 +15,63 @@ security = HTTPBearer()
 
 BLOCKED_STATUSES = {"inactive", "suspended"}
 
-
 def create_access_token(user_id: int, role: str) -> str:
+    """Generates a JWT token for a specific user."""
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
-    payload = {"user_id": user_id, "role": role, "exp": expire}
+    payload = {
+        "user_id": user_id, 
+        "role": role, 
+        "exp": expire
+    }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
-
-def decode_access_token(token: str) -> dict:
+def decode_access_token(token: str) -> Dict[str, Any]:
+    """Decodes a JWT token and validates signature/expiration."""
     try:
         return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
     except jwt.ExpiredSignatureError:
-        raise ValueError("Token has expired")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has expired",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     except jwt.InvalidTokenError:
-        raise ValueError("Invalid token")
-
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ) -> User:
+    """
+    FastAPI dependency that returns the authenticated User object.
+    Checks for validity, existence, and blocked status.
+    """
     token = credentials.credentials
-    try:
-        payload = decode_access_token(token)
-        user_id = payload.get("user_id")
-        if user_id is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
-
-        user = db.query(User).filter(User.id == user_id).first()
-
-        if user is None:
-            raise HTTPException(status_code=401, detail="User not found")
-
-        if user.membership_status in BLOCKED_STATUSES:
-            raise HTTPException(
-                status_code=403,
-                detail=f"Account {user.membership_status}. Contact an administrator."
-            )
-
-        return user
-
-    except ValueError as e:
+    payload = decode_access_token(token)
+    
+    user_id = payload.get("user_id")
+    if not user_id:
         raise HTTPException(
-            status_code=401,
-            detail=str(e),
-            headers={"WWW-Authenticate": "Bearer"},
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Token missing user identification"
         )
+
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="User not found"
+        )
+
+    if user.membership_status in BLOCKED_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Account is {user.membership_status}. Please contact support."
+        )
+
+    return user
